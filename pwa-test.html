@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Test - Milionários da Leograf</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1e1e1e 50%, #2c2c2c 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        .test-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .test-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .pass { background: #2ecc71; color: white; }
+        .fail { background: #e74c3c; color: white; }
+        .warning { background: #f39c12; color: white; }
+        .info { background: #3498db; color: white; }
+        h1, h2 { color: #2ecc71; }
+        button {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #27ae60;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .logo {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">🍀 PWA Test - Milionários da Leograf 💰</div>
+    
+    <div class="test-container">
+        <h2>🔍 Teste de Funcionalidades PWA</h2>
+        <button onclick="runAllTests()">🚀 Executar Todos os Testes</button>
+        <button onclick="testInstallability()">📱 Testar Instalação</button>
+        <button onclick="testServiceWorker()">⚙️ Testar Service Worker</button>
+        <button onclick="testManifest()">📋 Testar Manifest</button>
+        <button onclick="testOffline()">🔌 Testar Offline</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const results = document.getElementById('results');
+
+        function addResult(title, status, message) {
+            const statusClass = status === 'PASS' ? 'pass' : 
+                               status === 'FAIL' ? 'fail' : 
+                               status === 'WARNING' ? 'warning' : 'info';
+            
+            results.innerHTML += `
+                <div class="test-item">
+                    <span>${title}</span>
+                    <div>
+                        <span class="status ${statusClass}">${status}</span>
+                        <small style="margin-left: 10px; color: #bdc3c7;">${message}</small>
+                    </div>
+                </div>
+            `;
+        }
+
+        function clearResults() {
+            results.innerHTML = '<h3>📊 Resultados dos Testes:</h3>';
+        }
+
+        async function testManifest() {
+            try {
+                const response = await fetch('./manifest.json');
+                const manifest = await response.json();
+                
+                if (manifest.name) {
+                    addResult('Manifest - Nome', 'PASS', `"${manifest.name}"`);
+                } else {
+                    addResult('Manifest - Nome', 'FAIL', 'Nome não encontrado');
+                }
+                
+                if (manifest.icons && manifest.icons.length > 0) {
+                    addResult('Manifest - Ícones', 'PASS', `${manifest.icons.length} ícones encontrados`);
+                } else {
+                    addResult('Manifest - Ícones', 'FAIL', 'Ícones não encontrados');
+                }
+                
+                if (manifest.start_url) {
+                    addResult('Manifest - URL Inicial', 'PASS', manifest.start_url);
+                } else {
+                    addResult('Manifest - URL Inicial', 'FAIL', 'start_url não definida');
+                }
+                
+                if (manifest.display === 'standalone' || manifest.display === 'fullscreen') {
+                    addResult('Manifest - Display', 'PASS', manifest.display);
+                } else {
+                    addResult('Manifest - Display', 'WARNING', `${manifest.display || 'não definido'}`);
+                }
+                
+            } catch (error) {
+                addResult('Manifest', 'FAIL', `Erro: ${error.message}`);
+            }
+        }
+
+        async function testServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                addResult('Service Worker - Suporte', 'PASS', 'Navegador suporta SW');
+                
+                try {
+                    const registration = await navigator.serviceWorker.getRegistration();
+                    if (registration) {
+                        addResult('Service Worker - Registrado', 'PASS', 'SW ativo encontrado');
+                        
+                        if (registration.active) {
+                            addResult('Service Worker - Status', 'PASS', 'SW ativo e funcionando');
+                        } else {
+                            addResult('Service Worker - Status', 'WARNING', 'SW registrado mas não ativo');
+                        }
+                    } else {
+                        addResult('Service Worker - Registrado', 'FAIL', 'SW não registrado');
+                    }
+                } catch (error) {
+                    addResult('Service Worker - Erro', 'FAIL', error.message);
+                }
+            } else {
+                addResult('Service Worker - Suporte', 'FAIL', 'Navegador não suporta SW');
+            }
+        }
+
+        function testInstallability() {
+            // Verifica HTTPS
+            if (location.protocol === 'https:' || location.hostname === 'localhost') {
+                addResult('HTTPS', 'PASS', 'Site servido via HTTPS');
+            } else {
+                addResult('HTTPS', 'FAIL', 'PWA requer HTTPS');
+            }
+            
+            // Verifica se já está instalado
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                addResult('Instalação', 'PASS', 'PWA já está instalado!');
+            } else {
+                addResult('Instalação', 'INFO', 'PWA não instalado (normal para testes)');
+            }
+            
+            // Verifica prompt de instalação
+            if (window.deferredPrompt) {
+                addResult('Prompt Instalação', 'PASS', 'Prompt de instalação disponível');
+            } else {
+                addResult('Prompt Instalação', 'INFO', 'Prompt não disponível (pode já estar instalado)');
+            }
+        }
+
+        async function testOffline() {
+            if ('caches' in window) {
+                addResult('Cache API', 'PASS', 'Navegador suporta Cache API');
+                
+                try {
+                    const cacheNames = await caches.keys();
+                    if (cacheNames.length > 0) {
+                        addResult('Cache Storage', 'PASS', `${cacheNames.length} cache(s) encontrado(s)`);
+                        
+                        // Testa se recursos principais estão cacheados
+                        const cache = await caches.open(cacheNames[0]);
+                        const requests = await cache.keys();
+                        addResult('Recursos Cacheados', 'PASS', `${requests.length} recursos no cache`);
+                    } else {
+                        addResult('Cache Storage', 'WARNING', 'Nenhum cache encontrado');
+                    }
+                } catch (error) {
+                    addResult('Cache Storage', 'FAIL', error.message);
+                }
+            } else {
+                addResult('Cache API', 'FAIL', 'Navegador não suporta Cache API');
+            }
+        }
+
+        function testNetworkStatus() {
+            if ('onLine' in navigator) {
+                const status = navigator.onLine ? 'Online' : 'Offline';
+                const statusType = navigator.onLine ? 'PASS' : 'WARNING';
+                addResult('Status da Rede', statusType, status);
+            } else {
+                addResult('Status da Rede', 'INFO', 'Não disponível');
+            }
+        }
+
+        function testPerformance() {
+            if ('performance' in window && performance.timing) {
+                const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                const status = loadTime < 3000 ? 'PASS' : loadTime < 5000 ? 'WARNING' : 'FAIL';
+                addResult('Tempo de Carregamento', status, `${loadTime}ms`);
+            } else {
+                addResult('Performance', 'INFO', 'API não disponível');
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            addResult('🚀 Iniciando Testes', 'INFO', 'Executando todos os testes...');
+            
+            await testManifest();
+            await testServiceWorker();
+            testInstallability();
+            await testOffline();
+            testNetworkStatus();
+            testPerformance();
+            
+            addResult('✅ Testes Concluídos', 'PASS', 'Todos os testes executados!');
+        }
+
+        // Detecta prompt de instalação
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            window.deferredPrompt = e;
+            addResult('Evento Install', 'PASS', 'PWA é instalável!');
+        });
+
+        // Detecta quando PWA é instalado
+        window.addEventListener('appinstalled', (evt) => {
+            addResult('PWA Instalado', 'PASS', 'PWA foi instalado com sucesso!');
+        });
+
+        // Auto-executa testes básicos ao carregar
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                addResult('🎯 Página Carregada', 'PASS', 'Teste automático iniciado');
+                testNetworkStatus();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
