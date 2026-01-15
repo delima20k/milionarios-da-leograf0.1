@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Acompanhe os resultados do bolão da Lotofácil dos Milionários da Leograf em tempo real. Verifique jogos, acumule prêmios e torça pela sorte!">
+    <meta name="keywords" content="lotofácil, bolão, milionários, leograf, loteria, prêmios, sorte">
+    <meta name="author" content="Milionários da Leograf">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#2ecc71">
+    <meta name="msapplication-navbutton-color" content="#2ecc71">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- PWA Configuration -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Milionários">
+    <meta name="application-name" content="Milionários da Leograf">
+    
+    <!-- Icons and Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+    <link rel="apple-touch-icon" href="logo.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="logo.svg">
+    <link rel="mask-icon" href="logo.svg" color="#2ecc71">
+    
+    <!-- Microsoft Tiles -->
+    <meta name="msapplication-TileImage" content="logo.svg">
+    <meta name="msapplication-TileColor" content="#2ecc71">
+    <meta name="msapplication-config" content="browserconfig.xml">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Milionários da Leograf - Bolão da Lotofácil">
+    <meta property="og:description" content="Acompanhe os resultados do nosso bolão em tempo real!">
+    <meta property="og:image" content="logo.svg">
+    <meta property="og:url" content="https://seudominio.github.io/milinarios-da-leograf001/">
+    <meta property="og:site_name" content="Milionários da Leograf">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Milionários da Leograf">
+    <meta name="twitter:description" content="Bolão da Lotofácil em tempo real">
+    <meta name="twitter:image" content="logo.svg">
+    
+    <title>Milionários da Leograf - Bolão da Lotofácil</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ========================================
+         🦁💵 SPLASH SCREEN 3D - ANIMAÇÃO DE ENTRADA
+         ======================================== 
+         
+         MATEMÁTICA VISUAL 3D:
+         ━━━━━━━━━━━━━━━━━━━━━
+         • perspective: Define a distância do "olho" ao objeto 3D
+           - perspective: 1000px = observador a 1000px de distância
+           - Quanto MENOR o valor, MAIS intenso o efeito 3D
+         
+         • transform: rotateY()/rotateX() = Rotação nos eixos
+           - rotateY(180deg) = gira horizontalmente (como página de livro)
+           - rotateX(30deg) = inclina para frente/trás
+           - rotateZ(10deg) = gira no plano (como relógio)
+         
+         • transform-style: preserve-3d
+           - Mantém filhos no espaço 3D do pai
+         
+         ANIMAÇÕES EM CASCATA (DELAY PROGRESSIVO):
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         • Cada elemento tem um delay maior que o anterior
+         • Fórmula: delay = índice × intervalo
+         • Exemplo: 0s, 0.2s, 0.4s, 0.6s...
+         • Isso cria efeito de "onda" onde elementos entram em sequência
+    -->
+    <div class="splash-screen" id="splashScreen">
+        <!-- Container 3D com perspectiva -->
+        <div class="splash-3d-container">
+            
+            <!-- 💵 Nota de Real flutuando -->
+            <div class="nota-real">
+                <div class="nota-frente">
+                    <span class="nota-valor">R$ 100</span>
+                    <span class="nota-texto">REAIS</span>
+                </div>
+            </div>
+            
+            <!-- 🦁 Leão tentando pegar a nota -->
+            <div class="splash-leao">
+                <div class="leao-corpo">
+                    <!-- Juba animada -->
+                    <div class="splash-juba"></div>
+                    <!-- Cabeça -->
+                    <div class="splash-cabeca">
+                        <div class="splash-orelha-esq"></div>
+                        <div class="splash-orelha-dir"></div>
+                        <div class="splash-face">
+                            <div class="splash-olho-esq"></div>
+                            <div class="splash-olho-dir"></div>
+                            <div class="splash-focinho"></div>
+                            <div class="splash-nariz"></div>
+                            <div class="splash-boca"></div>
+                        </div>
+                    </div>
+                    <!-- Pata estendida para pegar nota -->
+                    <div class="splash-pata"></div>
+                </div>
+            </div>
+            
+            <!-- ✨ Partículas de brilho -->
+            <div class="splash-particles">
+                <span class="particle">✨</span>
+                <span class="particle">💰</span>
+                <span class="particle">🍀</span>
+                <span class="particle">⭐</span>
+                <span class="particle">💎</span>
+                <span class="particle">🎰</span>
+            </div>
+        </div>
+        
+        <!-- Mensagens em cascata -->
+        <div class="splash-mensagens">
+            <h1 class="splash-titulo">🦁 Milionários da Leograf 🍀</h1>
+            <p class="splash-bemvindo">Seja Bem-Vindo!</p>
+            <p class="splash-dica">💡 Aproveite e jogue o <strong>Jogo da Paciência</strong>!</p>
+            <div class="splash-loader">
+                <div class="loader-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <header class="header">
+        <div class="header-content">
+            <!-- 🦁 LEÃO CSS PURO - Ícone do App -->
+            <div class="leao-css" title="Milionários da Leograf">
+                <div class="leao-juba"></div>
+                <div class="leao-orelha-esq"></div>
+                <div class="leao-orelha-dir"></div>
+                <div class="leao-face"></div>
+                <div class="leao-sobrancelha-esq"></div>
+                <div class="leao-sobrancelha-dir"></div>
+                <div class="leao-olho-esq"></div>
+                <div class="leao-olho-dir"></div>
+                <div class="leao-focinho"></div>
+                <div class="leao-nariz"></div>
+                <div class="leao-boca"></div>
+                <div class="leao-bigode-esq"></div>
+                <div class="leao-bigode-dir"></div>
+            </div>
+            
+            <!-- Título -->
+            <h1 class="header-title">Milionários da Leograf</h1>
+            
+            <!-- Menu Hambúrguer -->
+            <div class="hamburger-menu" id="hamburger">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </div>
+        </div>
+        
+        <!-- Menu Lateral -->
+        <nav class="side-menu" id="sideMenu">
+            <ul class="menu-list">
+                <li class="menu-item">Sogro do Anderson cabeleira</li>
+                <li class="menu-item">Renato e Alan</li>
+                <li class="menu-item">Anderson Cabeleira</li>
+                <li class="menu-item">Black</li>
+                <li class="menu-item">Sidnei</li>
+                <li class="menu-item">Fabio</li>
+                <li class="menu-item">Gil</li>
+                <li class="menu-item">Kabelo com K</li>
+                <li class="menu-item">Claudia</li>
+                <li class="menu-item">Wanderson</li>
+                <li class="menu-item">Alan</li>
+                <li class="menu-item">veio</li>
+                <li class="menu-item">Edimilson </li>
+                <li class="menu-item">Wilson</li>
+                <li class="menu-item">Ricardo</li>
+                <li class="menu-item">Joel</li>
+                <li class="menu-item">Li cozinheiro</li>
+                <li class="menu-item">Bahia</li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        <h1 class="main-title">MILIONÁRIOS DA LEOGRAF</h1>
+        
+        <div class="lottery-section">
+            <div class="lottery-header">
+                <!-- Ícone Trevo da Lotofácil -->
+                <div class="clover-icon">
+                    <div class="leaf leaf-1"></div>
+                    <div class="leaf leaf-2"></div>
+                    <div class="leaf leaf-3"></div>
+                    <div class="leaf leaf-4"></div>
+                    <div class="stem"></div>
+                </div>
+                <h2 class="lottery-title">LOTOFÁCIL</h2>
+            </div>
+            
+            <h2 class="bolao-title">Bolão com 18 pessoas</h2>
+            <h3 class="valor-arrecadado">Valor Arrecadado R$ 1,512,00 Reais</h3>
+            
+            <!-- Botão Buscar Resultado -->
+            <div class="botao-container">
+                <!-- � MENSAGEM DE BOAS-VINDAS - Apontar para o jogo -->
+                <div id="welcomeTooltip" class="welcome-tooltip">
+                    <div class="welcome-content">
+                        <button class="welcome-close" id="welcomeClose">✖</button>
+                        <div class="welcome-icon">🎮</div>
+                        <h3>Bem-vindo, Milionário! 🦁</h3>
+                        <p>Enquanto espera o sorteio, que tal um jogo?</p>
+                        <p class="welcome-destaque">👇 Clique aqui para jogar! 👇</p>
+                        <div class="welcome-arrow"></div>
+                    </div>
+                </div>
+                
+                <!-- �🃏 BOTÃO DO JOGO DE PACIÊNCIA -->
+                <button id="btnPaciencia" class="btn-resultado btn-paciencia">
+                    🃏 Jogar Paciência da Sorte
+                </button>
+                
+                <a href="https://loterias.caixa.gov.br/paginas/lotofacil.aspx" target="_blank" class="btn-resultado">
+                    🔍 Buscar Resultado no Site
+                </a>
+                <button id="btnBuscarResultado" class="btn-resultado btn-automatico">
+                    🤖 Verificar TODOS os Concursos (desde 3586)
+                </button>
+           
+            </div>
+            
+            <!-- 🃏 MODAL DO JOGO DE PACIÊNCIA -->
+            <div id="pacienciaModal" class="paciencia-modal">
+                <div class="paciencia-container">
+                    <div class="paciencia-header">
+                        <h2 class="paciencia-title">🍀 Paciência da Sorte 🃏</h2>
+                        <div class="paciencia-info">
+                            <span id="pacienciaMovimentos">Movimentos: 0</span>
+                            <span id="pacienciaTempo">Tempo: 00:00</span>
+                            <span id="pacienciaPontos">Pontos: 0</span>
+                        </div>
+                        <div class="paciencia-botoes">
+                            <button id="btnNovaPaciencia" class="btn-paciencia-acao">🔄 Novo Jogo</button>
+                            <button id="btnFecharPaciencia" class="btn-paciencia-fechar">✖ Fechar</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Área do Jogo -->
+                    <div class="paciencia-mesa" id="pacienciaMesa">
+                        <!-- Pilhas de Fundação (onde as cartas vão ao final) -->
+                        <div class="fundacao-area">
+                            <div class="fundacao" id="fundacao-0" data-naipe="trevo"></div>
+                            <div class="fundacao" id="fundacao-1" data-naipe="ouro"></div>
+                            <div class="fundacao" id="fundacao-2" data-naipe="copas"></div>
+                            <div class="fundacao" id="fundacao-3" data-naipe="espadas"></div>
+                        </div>
+                        
+                        <!-- Monte e Descarte -->
+                        <div class="monte-area">
+                            <div class="monte" id="monte"></div>
+                            <div class="descarte" id="descarte"></div>
+                        </div>
+                        
+                        <!-- Tableau (7 colunas de cartas) -->
+                        <div class="tableau-area">
+                            <div class="tableau-coluna" id="tableau-0"></div>
+                            <div class="tableau-coluna" id="tableau-1"></div>
+                            <div class="tableau-coluna" id="tableau-2"></div>
+                            <div class="tableau-coluna" id="tableau-3"></div>
+                            <div class="tableau-coluna" id="tableau-4"></div>
+                            <div class="tableau-coluna" id="tableau-5"></div>
+                            <div class="tableau-coluna" id="tableau-6"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mensagem de Vitória -->
+                    <div id="pacienciaVitoria" class="paciencia-vitoria" style="display: none;">
+                        <div class="vitoria-conteudo">
+                            <h2>🏆 PARABÉNS! 🏆</h2>
+                            <p>Você completou o jogo!</p>
+                            <p id="vitoriaStats"></p>
+                            <button id="btnJogarNovamente" class="btn-paciencia-acao">🎮 Jogar Novamente</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Campo de Resultado -->
+            <div id="resultadoContainer" class="resultado-container" style="display: none;">
+                <h3 class="resultado-title">📊 Resultado da Lotofácil</h3>
+                <div class="resultado-info">
+                    <p><strong>Concurso:</strong> <span id="numeroConcurso">-</span></p>
+                    <p><strong>Data do Sorteio:</strong> <span id="dataConcurso">-</span></p>
+                </div>
+                <div class="resultado-numeros">
+                    <p><strong>Números Sorteados:</strong></p>
+                    <div id="numerosSorteados" class="numeros-grid"></div>
+                </div>
+                <div class="resultado-premio">
+                    <p><strong>Prêmio:</strong> <span id="valorPremio">-</span></p>
+                    <p><strong>Ganhadores (15 pontos):</strong> <span id="ganhadores15">-</span></p>
+                </div>
+            </div>
+            
+            <!-- Verificação dos Jogos -->
+            <div id="verificacaoContainer" class="verificacao-container" style="display: none;">
+                <h3 class="verificacao-title">🎯 Análise Completa - TODOS os Concursos da Teimosinha</h3>
+                <p style="color: #f39c12; text-align: center; margin-bottom: 25px; font-size: 16px;">
+                    📈 <strong>Teimosinha 24x a partir de 13/01/2026 (Concurso 3586)</strong><br>
+                    🎲 <strong>18 jogos por sorteio</strong><br>
+                    💎 Prêmios calculados para 11, 12, 13, 14 e 15 pontos em TODOS os concursos<br>
+                    🏆 Total acumulado histórico de todos os 18 jogos<br>
+                    🔄 <strong>Sistema automático: detecta novos concursos e inclui na análise</strong>
+                </p>
+                <div id="resumoPremios" class="resumo-premios"></div>
+                <div id="jogosVerificados" class="jogos-verificados"></div>
+            </div>
+            
+            <!-- Seção de Jogos -->
+            <div class="jogos-section">
+                <h2 class="jogos-title">JOGOS (18 jogos)</h2>
+                <h3 class="jogo-item">1) 1-2-3-5-7-8-9-11-13-14-15-17-18-20-21</h3>
+                <h3 class="jogo-item">2) 1-3-4-5-6-7-9-10-11-13-15-17-19-20-21</h3>
+                <h3 class="jogo-item">3) 1-2-3-5-7-9-11-12-13-15-16-17-18-19-20</h3>
+                <h3 class="jogo-item">4) 1-3-4-5-7-8-9-10-13-14-15-17-18-19-21</h3>
+                <h3 class="jogo-item">5) 1-2-3-5-7-8-9-10-12-13-15-17-19-20-21</h3>
+                <h3 class="jogo-item">6) 1-2-3-4-5-6-7-9-13-15-16-17-18-19-21</h3>
+                <h3 class="jogo-item">7) 1-2-3-4-5-6-7-9-11-13-15-17-18-19-20</h3>
+                <h3 class="jogo-item">8) 1-2-3-5-7-8-9-10-11-13-15-17-18-19-21</h3>
+                <h3 class="jogo-item">9) 1-2-3-4-5-6-7-9-11-12-13-16-17-20-21</h3>
+                <h3 class="jogo-item">10) 1-2-3-4-5-6-7-9-11-13-14-15-17-18-21</h3>
+                <h3 class="jogo-item">11) 2-3-4-5-6-7-9-11-13-15-17-18-19-20-21</h3>
+                <h3 class="jogo-item">12) 2-3-5-7-8-9-10-11-13-15-17-18-19-20-21</h3>
+                <h3 class="jogo-item">13) 2-3-4-5-6-7-9-11-13-15-16-17-18-19-20</h3>
+                <h3 class="jogo-item">14) 2-3-5-7-8-9-11-13-14-15-17-18-19-20-21</h3>
+                <h3 class="jogo-item">15) 2-3-4-5-6-7-9-10-11-13-15-17-19-20-21</h3>
+                <h3 class="jogo-item">16) 2-3-4-5-6-7-9-11-12-13-15-17-18-20-21</h3>
+                <h3 class="jogo-item">17) 2-3-5-7-8-9-10-11-13-14-15-17-18-19-20</h3>
+                <h3 class="jogo-item">18) 2-3-5-7-8-9-10-11-12-13-15-17-18-20-21</h3>
+            </div>
+            
+            <!-- Calendário de Teimosinhas -->
+            <div class="calendario-section">
+                <h2 class="calendario-title">CALENDÁRIO DAS TEIMOSINHAS</h2>
+                <p class="calendario-subtitle">24 Sorteios Consecutivos a partir de 13/01/2026 (Exceto Domingos)</p>
+                
+                <div class="dias-lista">
+                    <div class="dia-item">1ª Teimosinha - Terça-feira, 13/01/2026 (Concurso 3586)</div>
+                    <div class="dia-item">2ª Teimosinha - Quarta-feira, 14/01/2026</div>
+                    <div class="dia-item">3ª Teimosinha - Quinta-feira, 15/01/2026</div>
+                    <div class="dia-item">4ª Teimosinha - Sexta-feira, 16/01/2026</div>
+                    <div class="dia-item">5ª Teimosinha - Sábado, 17/01/2026</div>
+                    <div class="dia-item domingo-pulado">❌ Domingo, 18/01/2026 (Não há sorteio)</div>
+                    <div class="dia-item">6ª Teimosinha - Segunda-feira, 19/01/2026</div>
+                    <div class="dia-item">7ª Teimosinha - Terça-feira, 20/01/2026</div>
+                    <div class="dia-item">8ª Teimosinha - Quarta-feira, 21/01/2026</div>
+                    <div class="dia-item">9ª Teimosinha - Quinta-feira, 22/01/2026</div>
+                    <div class="dia-item">10ª Teimosinha - Sexta-feira, 23/01/2026</div>
+                    <div class="dia-item">11ª Teimosinha - Sábado, 24/01/2026</div>
+                    <div class="dia-item domingo-pulado">❌ Domingo, 25/01/2026 (Não há sorteio)</div>
+                    <div class="dia-item">12ª Teimosinha - Segunda-feira, 26/01/2026</div>
+                    <div class="dia-item">13ª Teimosinha - Terça-feira, 27/01/2026</div>
+                    <div class="dia-item">14ª Teimosinha - Quarta-feira, 28/01/2026</div>
+                    <div class="dia-item">15ª Teimosinha - Quinta-feira, 29/01/2026</div>
+                    <div class="dia-item">16ª Teimosinha - Sexta-feira, 30/01/2026</div>
+                    <div class="dia-item">17ª Teimosinha - Sábado, 31/01/2026</div>
+                    <div class="dia-item domingo-pulado">❌ Domingo, 01/02/2026 (Não há sorteio)</div>
+                    <div class="dia-item">18ª Teimosinha - Segunda-feira, 02/02/2026</div>
+                    <div class="dia-item">19ª Teimosinha - Terça-feira, 03/02/2026</div>
+                    <div class="dia-item">20ª Teimosinha - Quarta-feira, 04/02/2026</div>
+                    <div class="dia-item">21ª Teimosinha - Quinta-feira, 05/02/2026</div>
+                    <div class="dia-item">22ª Teimosinha - Sexta-feira, 06/02/2026</div>
+                    <div class="dia-item">23ª Teimosinha - Sábado, 07/02/2026</div>
+                    <div class="dia-item domingo-pulado">❌ Domingo, 08/02/2026 (Não há sorteio)</div>
+                    <div class="dia-item destaque-final">24ª Teimosinha - Segunda-feira, 09/02/2026 🎉 ÚLTIMA!</div>
+                </div>
+            </div>
+
+            <!-- Nova Seção: 24 Botões das Teimosinhas -->
+            <div class="teimosinha-botoes-section">
+                <h2 class="teimosinha-botoes-title">🎯 24 BOTÕES DAS TEIMOSINHAS</h2>
+                <p class="teimosinha-botoes-subtitle">Clique em cada botão para verificar o resultado e somar os prêmios!</p>
+                
+                <!-- Painel de Total Acumulado -->
+                <div class="total-acumulado-painel">
+                    <div class="total-acumulado-valor">
+                        <span class="total-label">💰 TOTAL ACUMULADO:</span>
+                        <span id="totalAcumuladoBotoes" class="total-valor">R$ 0,00</span>
+                    </div>
+                    <div class="total-acumulado-info">
+                        <span id="botoesVerificadosCount">0</span> de 24 concursos verificados
+                    </div>
+                    <button id="btnLimparTotalAcumulado" class="btn-limpar-total">�️ Limpar Total</button>
+                </div>
+
+                <!-- Grid dos 24 Botões -->
+                <div class="botoes-teimosinha-grid" id="botoesTeimosinha">
+                    <!-- Os 24 botões serão gerados dinamicamente pelo JavaScript -->
+                </div>
+
+                <!-- Container para Resultado do Concurso -->
+                <div id="resultadoConcursoIndividual" class="resultado-concurso-individual" style="display: none;">
+                    <!-- Resultado será inserido aqui -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ============================================
+         RODAPÉ DE AGRADECIMENTO
+         ============================================ -->
+    <footer class="rodape-agradecimento">
+        <div class="rodape-container">
+            <!-- Seção Principal de Agradecimento -->
+            <div class="agradecimento-principal">
+                <div class="agradecimento-icone">
+                    <div class="coracao-icon">❤️</div>
+                    <div class="trevo-icon">🍀</div>
+                </div>
+                <h2 class="agradecimento-titulo">Obrigado por Participar!</h2>
+                <p class="agradecimento-texto">
+                    Cada um de vocês faz parte desta jornada rumo ao sonho! 
+                    Unidos no bolão, unidos na esperança de conquistarmos juntos essa vitória!
+                </p>
+            </div>
+
+            <!-- Lista de Participantes com Desejos -->
+            <div class="participantes-secao">
+                <h3 class="participantes-titulo">🎯 Nossos Guerreiros da Sorte</h3>
+                <div class="participantes-grid">
+                    <div class="participante-card">
+                        <div class="participante-icon">🌟</div>
+                        <p class="participante-nome">A todos os corajosos</p>
+                        <p class="participante-desejo">Que a sorte brilhe sobre vocês!</p>
+                    </div>
+                    <div class="participante-card">
+                        <div class="participante-icon">💎</div>
+                        <p class="participante-nome">Cada apostador</p>
+                        <p class="participante-desejo">Que os números escolhidos sejam os premiados!</p>
+                    </div>
+                    <div class="participante-card">
+                        <div class="participante-icon">🚀</div>
+                        <p class="participante-nome">Toda a equipe</p>
+                        <p class="participante-desejo">Rumo ao milhão! Vamos juntos!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensagem de Boa Sorte -->
+            <div class="boa-sorte-secao">
+                <div class="boa-sorte-decoracao">
+                    <span class="estrela">⭐</span>
+                    <span class="moeda">🪙</span>
+                    <span class="diamante">💎</span>
+                    <span class="trevo">🍀</span>
+                    <span class="estrela">⭐</span>
+                </div>
+                <h3 class="boa-sorte-titulo">🎲 Que a Sorte Esteja Conosco! 🎲</h3>
+                <p class="boa-sorte-texto">
+                    <strong>Milionários da Leograf</strong> - Onde os sonhos se tornam realidade!<br>
+                    Cada jogo é uma nova esperança, cada concurso uma nova oportunidade.<br>
+                    <em>Juntos somos mais fortes, juntos vamos vencer! 💪✨</em>
+                </p>
+                <div class="boa-sorte-decoracao">
+                    <span class="raio">⚡</span>
+                    <span class="coroa">👑</span>
+                    <span class="trofeu">🏆</span>
+                    <span class="coroa">👑</span>
+                    <span class="raio">⚡</span>
+                </div>
+            </div>
+
+            <!-- Informações do Site -->
+            <div class="site-info">
+                <p class="site-info-texto">
+                    🌐 Site desenvolvido com carinho para acompanhar nossa jornada<br>
+                    📱 Otimizado para todos os dispositivos<br>
+                    🔄 Resultados atualizados automaticamente
+                </p>
+                <div class="site-info-data">
+                    Desenvolvido em 2025 • Milionários da Leograf
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // Registrar Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('Service Worker registrado!', reg))
+                    .catch(err => console.log('Erro ao registrar Service Worker:', err));
+            });
+        }
+    </script>
+</body>
+</html>
