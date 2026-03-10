@@ -1,6 +1,9 @@
-const CACHE_NAME = 'milionarios-v3.0';
-const STATIC_CACHE = 'milionarios-static-v3.0';
-const DYNAMIC_CACHE = 'milionarios-dynamic-v3.0';
+// Importa o Service Worker do OneSignal (push quando app está fechado)
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
+const CACHE_NAME = 'milionarios-v6.1';
+const STATIC_CACHE = 'milionarios-static-v6.1';
+const DYNAMIC_CACHE = 'milionarios-dynamic-v6.1';
 
 // Recursos essenciais para cache
 const CORE_ASSETS = [
@@ -9,7 +12,8 @@ const CORE_ASSETS = [
   './style.css',
   './script.js',
   './manifest.json',
-  './logo.svg'
+  './logo.svg',
+  './dinheiro2.mp3'
 ];
 
 // URLs da API que podem ser cacheadas
@@ -152,48 +156,6 @@ async function doBackgroundSync() {
 }
 
 // ============================================
-// 🔔 NOTIFICAÇÕES PUSH
-// ============================================
-
-self.addEventListener('push', event => {
-  if (event.data) {
-    const data = event.data.json();
-    const options = {
-      body: data.body,
-      icon: './logo.svg',
-      badge: './logo.svg',
-      tag: 'lotofacil-resultado',
-      requireInteraction: true,
-      vibrate: [200, 100, 200],
-      data: { url: './' },
-      actions: [
-        { action: 'view', title: '👁️ Ver Resultado' },
-        { action: 'close', title: '✖ Fechar' }
-      ]
-    };
-    event.waitUntil(
-      self.registration.showNotification(data.title, options)
-    );
-  }
-});
-
-// Clique em notificações
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-
-  if (event.action !== 'close') {
-    const urlAlvo = (event.notification.data && event.notification.data.url) || './';
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-        for (const client of windowClients) {
-          if ('focus' in client) return client.focus();
-        }
-        return clients.openWindow(urlAlvo);
-      })
-    );
-  }
-});
-
 // ============================================
 // 🔄 PERIODIC BACKGROUND SYNC
 // ============================================
@@ -252,6 +214,7 @@ async function verificarNovoResultadoSW() {
         icon: './logo.svg',
         badge: './logo.svg',
         tag: 'lotofacil-resultado',
+        sound: './dinheiro2.mp3',
         requireInteraction: true,
         vibrate: [200, 100, 200],
         data: { url: './' },
@@ -266,24 +229,32 @@ async function verificarNovoResultadoSW() {
   }
 }
 
-// Verifica se está na hora das notificações agendadas (10:00, 12:30, 15:00 BRT)
+// Verifica se está na hora das notificações agendadas (10:00, 13:05, 15:00 BRT)
 async function verificarHorariosSW() {
   try {
     const agora = new Date();
 
-    // Hora e data no fuso de Brasília (com suporte a horário de verão via Intl)
-    const horaBR = new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false
-    }).format(agora); // ex: "10:00"
+    // Calcula minutos totais desde meia-noite no fuso de Brasília
+    const partes = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(agora);
+
+    let horaBR = 0, minBR = 0;
+    partes.forEach(p => {
+      if (p.type === 'hour')   horaBR = parseInt(p.value, 10);
+      if (p.type === 'minute') minBR  = parseInt(p.value, 10);
+    });
+    const minutosBR = horaBR * 60 + minBR;
 
     const dataBR = new Intl.DateTimeFormat('pt-BR', {
       timeZone: 'America/Sao_Paulo', dateStyle: 'short'
-    }).format(agora); // ex: "10/03/2026"
+    }).format(agora);
 
     const HORARIOS = [
-      { chave: '10_00', horario: '10:00' },
-      { chave: '12_30', horario: '12:30' },
-      { chave: '15_00', horario: '15:00' }
+      { chave: '10_00', label: '10:00', minutos: 600 },
+      { chave: '13_20', label: '13:20', minutos: 800 },
+      { chave: '15_00', label: '15:00', minutos: 900 }
     ];
 
     const store = await caches.open('milionarios-notifications-v1');
@@ -291,7 +262,8 @@ async function verificarHorariosSW() {
     const totalFormatado = totalAcumulado > 0 ? formatarMoedaSW(totalAcumulado) : null;
 
     for (const h of HORARIOS) {
-      if (horaBR === h.horario) {
+      // Janela de 59 minúsculo: dispara se chegamos a qualquer minuto do horário
+      if (minutosBR >= h.minutos && minutosBR < h.minutos + 59) {
         const chaveCache = `notif-horario-${h.chave}`;
         const savedResp = await store.match(chaveCache);
         const ultimaData = savedResp ? await savedResp.text() : '';
@@ -304,10 +276,11 @@ async function verificarHorariosSW() {
             : '📱 Abra o app para verificar os resultados!';
 
           await self.registration.showNotification('🦁 Milionários da Leograf', {
-            body: `⏰ ${h.horario}h — ${corpo}`,
+            body: `⏰ ${h.label}h — ${corpo}`,
             icon: './logo.svg',
             badge: './logo.svg',
             tag: `horario-${h.chave}`,
+            sound: './dinheiro2.mp3',
             vibrate: [100, 50, 100],
             data: { url: './' },
             actions: [

@@ -1929,7 +1929,9 @@ const CelebracaoManager = {
 // ============================================
 
 // Horários diários agendados (no fuso de Brasília)
-const HORARIOS_NOTIFICACAO = ['10:00', '12:30', '15:00'];
+const HORARIOS_NOTIFICACAO = ['10:00', '13:20', '15:00'];
+// Minutos desde meia-noite para cada horário (usado na comparação por janela)
+const HORARIOS_MINUTOS = { '10:00': 600, '13:20': 800, '15:00': 900 };
 
 const NotificacaoManager = {
 
@@ -1964,72 +1966,129 @@ const NotificacaoManager = {
         }
     },
 
-    // Solicita permissão ao usuário
+    // Solicita permissão ao usuário — usa OneSignal se disponível
     async solicitar() {
         if (!this.temSuporte()) {
-            alert('Seu navegador não suporta notificações push.');
+            alert('Seu navegador não suporta notificações.');
             return false;
         }
         if (Notification.permission === 'denied') {
             alert(
                 '🔕 Notificações bloqueadas!\n\n' +
-                'Para ativar, clique no ícone de cadeado/informações na barra de endereço ' +
-                'do navegador e permita as notificações para este site.'
+                'Para ativar: clique no ícone de cadeado na barra de endereço ' +
+                'e permita as notificações para este site.'
             );
             return false;
         }
-        const permissao = await Notification.requestPermission();
-        if (permissao === 'granted') {
-            await this.ativar();
-            this.atualizarBotao();
-            await this.checarNovoResultado();
-            return true;
-        }
-        this.atualizarBotao();
-        return false;
-    },
 
-    // Registra Periodic Background Sync (Chrome/Android) com intervalo de 1h
-    async ativar() {
-        try {
-            const registro = await navigator.serviceWorker.ready;
-            if ('periodicSync' in registro) {
-                const perm = await navigator.permissions.query({ name: 'periodic-background-sync' });
-                if (perm.state === 'granted') {
-                    await registro.periodicSync.register('check-lotofacil-resultado', {
-                        minInterval: 60 * 60 * 1000 // 1 hora — suficiente para pegar 10h, 12:30h e 15h
-                    });
-                    console.log('[Notificações] Periodic sync registrado (intervalo: 1h).');
-                }
+        // Se OneSignal já está carregado, usa opt-in (push funciona com app fechado)
+        if (window._oneSignalInstance) {
+            try {
+                await window._oneSignalInstance.User.PushSubscription.optIn();
+            } catch (err) {
+                console.warn('[Notificações] OneSignal optIn falhou:', err);
             }
             localStorage.setItem('notificacoesAtivas', 'true');
-        } catch (err) {
-            console.warn('[Notificações] Erro ao registrar periodic sync:', err);
+            this.atualizarBotao();
+            this.checarNovoResultado();
+            return true;
         }
+
+        // Fallback: requestPermission nativa (sem OneSignal)
+        const permissao = await Notification.requestPermission();
+
+        if (permissao !== 'granted') {
+            this.atualizarBotao();
+            return false;
+        }
+
+        // Atualiza o botão IMEDIATAMENTE — sem esperar o SW
+        localStorage.setItem('notificacoesAtivas', 'true');
+        this.atualizarBotao();
+
+        // Registra Periodic Sync em background (não bloqueia)
+        this._registrarPeriodicSync();
+
+        // Verifica resultado (também em background)
+        this.checarNovoResultado();
+
+        return true;
+    },
+
+    // Registra Periodic Background Sync sem bloquear o fluxo principal
+    async _registrarPeriodicSync() {
+        try {
+            const reg = await this._swReady(6000);
+            if (!('periodicSync' in reg)) return;
+            const perm = await navigator.permissions.query({ name: 'periodic-background-sync' });
+            if (perm.state === 'granted') {
+                await reg.periodicSync.register('check-lotofacil-resultado', {
+                    minInterval: 60 * 60 * 1000
+                });
+                console.log('[Notificações] Periodic sync registrado (1h).');
+            }
+        } catch (err) {
+            console.warn('[Notificações] Periodic sync não disponível:', err.message);
+        }
+    },
+
+    // Mantido para compatibilidade interna
+    async ativar() {
+        localStorage.setItem('notificacoesAtivas', 'true');
+        this._registrarPeriodicSync();
     },
 
     async desativar() {
+        // OneSignal opt-out se disponível
+        if (window._oneSignalInstance) {
+            try {
+                await window._oneSignalInstance.User.PushSubscription.optOut();
+            } catch (err) {
+                console.warn('[Notificações] OneSignal optOut falhou:', err);
+            }
+        }
         try {
-            const registro = await navigator.serviceWorker.ready;
-            if ('periodicSync' in registro) {
-                await registro.periodicSync.unregister('check-lotofacil-resultado');
+            const reg = await this._swReady(3000);
+            if ('periodicSync' in reg) {
+                await reg.periodicSync.unregister('check-lotofacil-resultado');
             }
         } catch (_) {}
         localStorage.removeItem('notificacoesAtivas');
         localStorage.removeItem('ultimoConcursoNotificado');
-        // Limpa chaves de horário agendado
         HORARIOS_NOTIFICACAO.forEach(h => localStorage.removeItem(`notif_horario_${h.replace(':', '_')}`));
         this.atualizarBotao();
         console.log('[Notificações] Notificações desativadas.');
     },
 
-    // Dispara notificação via Service Worker
+    // Retorna o registro do SW com timeout para não travar
+    async _swReady(timeoutMs = 4000) {
+        return Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('SW timeout')), timeoutMs)
+            )
+        ]);
+    },
+
+    // Dispara notificação via SW, com fallback para new Notification()
     async _mostrarNotificacao(titulo, opcoes) {
+        // Tenta via Service Worker (necessário em Android/PWA)
         try {
-            const registro = await navigator.serviceWorker.ready;
-            await registro.showNotification(titulo, opcoes);
+            const reg = await this._swReady();
+            await reg.showNotification(titulo, opcoes);
+            return;
+        } catch (_) {}
+        // Fallback: new Notification() (desktop, Firefox, iOS 16.4+)
+        try {
+            if (Notification.permission === 'granted') {
+                new Notification(titulo, {
+                    body: opcoes.body,
+                    icon: opcoes.icon,
+                    tag:  opcoes.tag
+                });
+            }
         } catch (err) {
-            console.warn('[Notificações] Erro ao exibir notificação:', err);
+            console.warn('[Notificações] Não foi possível exibir notificação:', err);
         }
     },
 
@@ -2172,7 +2231,8 @@ const NotificacaoManager = {
     },
 
     // ─────────────────────────────────────────────
-    // Verifica se está na hora de 10:00, 12:30 ou 15:00 e dispara
+    // Verifica se já passou a hora agendada hoje e ainda não foi notificado.
+    // Usa janela de 59 min — não perde o horário se o celular estava travado.
     // ─────────────────────────────────────────────
     async verificarHorarioAgendado() {
         if (Notification.permission !== 'granted') return;
@@ -2181,44 +2241,57 @@ const NotificacaoManager = {
         const agora = new Date();
         const hojeStr = agora.toDateString();
 
-        // Hora atual no fuso de Brasília
-        const horaBR = new Intl.DateTimeFormat('pt-BR', {
+        // Minutos desde meia-noite em Brasília
+        const partes = new Intl.DateTimeFormat('pt-BR', {
             timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false
-        }).format(agora);
+        }).formatToParts(agora);
+        const hBR = parseInt(partes.find(p => p.type === 'hour').value);
+        const mBR = parseInt(partes.find(p => p.type === 'minute').value);
+        const minutosBR = hBR * 60 + mBR;
 
         for (const horario of HORARIOS_NOTIFICACAO) {
+            const minAgendado = HORARIOS_MINUTOS[horario];
+            // Janela: do horário até 59 min depois (pega mesmo se o celular travou)
+            if (minutosBR < minAgendado || minutosBR >= minAgendado + 59) continue;
+
             const chave = `notif_horario_${horario.replace(':', '_')}`;
-            if (horaBR === horario && localStorage.getItem(chave) !== hojeStr) {
-                localStorage.setItem(chave, hojeStr);
+            if (localStorage.getItem(chave) === hojeStr) continue; // já notificou hoje
 
-                const total = this.obterTotalAcumulado();
-                const corpo = total > 0
-                    ? `💰 Total acumulado: ${this.formatarMoeda(total)}`
-                    : '📱 Abra o app para verificar os resultados!';
+            localStorage.setItem(chave, hojeStr);
 
-                await this._mostrarNotificacao('🦁 Milionários da Leograf', {
-                    body: `⏰ ${horario}h — ${corpo}`,
-                    icon: './logo.svg',
-                    badge: './logo.svg',
-                    tag: `horario-${horario.replace(':', '_')}`,
-                    vibrate: [100, 50, 100],
-                    data: { url: './' },
-                    actions: [
-                        { action: 'view', title: '🔍 Ver no App' },
-                        { action: 'close', title: '✖ Fechar' }
-                    ]
-                });
-                console.log(`[Notificações] Notificação de ${horario}h enviada.`);
-            }
+            const total = this.obterTotalAcumulado();
+            const corpo = total > 0
+                ? `💰 Total acumulado: ${this.formatarMoeda(total)}`
+                : '📱 Abra o app para verificar os resultados!';
+
+            await this._mostrarNotificacao('🦁 Milionários da Leograf', {
+                body: `⏰ ${horario}h — ${corpo}`,
+                icon: './logo.svg',
+                badge: './logo.svg',
+                tag: `horario-${horario.replace(':', '_')}`,
+                vibrate: [100, 50, 100],
+                data: { url: './' },
+                actions: [
+                    { action: 'view', title: '🔍 Ver no App' },
+                    { action: 'close', title: '✖ Fechar' }
+                ]
+            });
+            console.log(`[Notificações] Notificação de ${horario}h enviada.`);
         }
     },
 
-    // Inicia verificação a cada 30 s quando o app está aberto
+    // Inicia setInterval de 30s + dispara ao retomar visibilidade (desbloquear tela)
     iniciarAgendamentoDiario() {
         if (!this.temSuporte()) return;
         this.verificarHorarioAgendado();
         setInterval(() => this.verificarHorarioAgendado(), 30 * 1000);
-        console.log('[Notificações] Agendamento diário ativo: 10:00 • 12:30 • 15:00');
+        // Quando o usuário volta pro app após bloquear a tela, verifica imediatamente
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.verificarHorarioAgendado();
+            }
+        });
+        console.log('[Notificações] Agendamento diário ativo: 10:00 • 12:45 • 15:00');
     },
 
     // Verifica API ao abrir o app: se saiu resultado novo, notifica
@@ -2264,6 +2337,27 @@ const NotificacaoManager = {
     atualizarBotao() {
         const btn = document.getElementById('btnNotificacoes');
         if (!btn) return;
+
+        // Usa estado do OneSignal se disponível
+        const oneSignal = window._oneSignalInstance;
+        if (oneSignal) {
+            const optedIn = oneSignal.User?.PushSubscription?.optedIn;
+            if (Notification.permission === 'denied') {
+                btn.textContent = '🔕 Notificações bloqueadas';
+                btn.classList.add('btn-notificacoes--bloqueado');
+                btn.classList.remove('btn-notificacoes--ativo');
+            } else if (optedIn) {
+                btn.textContent = '🔔 Notificações Ativas ✓';
+                btn.classList.add('btn-notificacoes--ativo');
+                btn.classList.remove('btn-notificacoes--bloqueado');
+            } else {
+                btn.textContent = '🔔 Ativar Notificações';
+                btn.classList.remove('btn-notificacoes--ativo');
+                btn.classList.remove('btn-notificacoes--bloqueado');
+            }
+            return;
+        }
+
         const estado = this.estadoPermissao();
         const ativo = localStorage.getItem('notificacoesAtivas') === 'true';
 
@@ -2290,6 +2384,16 @@ const NotificacaoManager = {
     },
 
     async toggle() {
+        // Se OneSignal disponível, decide com base no seu estado
+        if (window._oneSignalInstance) {
+            const optedIn = window._oneSignalInstance.User?.PushSubscription?.optedIn;
+            if (optedIn) {
+                await this.desativar();
+            } else {
+                await this.solicitar();
+            }
+            return;
+        }
         const ativo = localStorage.getItem('notificacoesAtivas') === 'true'
             && Notification.permission === 'granted';
         if (ativo) {
