@@ -301,6 +301,9 @@ btnBuscarResultado.addEventListener('click', async () => {
 
         // Verificar todos os jogos em todos os concursos
         verificarTodosJogos(todosResultados);
+
+        // Notificar no celular: jogos premiados + total acumulado
+        NotificacaoManager.notificarResultadoEncontrado(todosResultados);
         
         // Scroll suave até o resultado
         resultadoContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -586,6 +589,9 @@ function verificarTodosJogos(resultados) {
     `;
     
     resumoPremios.innerHTML = resumoHTML;
+
+    // Persiste o total para uso nas notificações agendadas e de resultado
+    NotificacaoManager.salvarTotalAcumulado(totalGeralAcumulado);
     
     // ========================================
     // TABELA DE PRÊMIOS POR JOGO
@@ -1766,4 +1772,323 @@ const JogoPaciencia = {
 // Inicializa o jogo quando o DOM carregar
 document.addEventListener('DOMContentLoaded', () => {
     JogoPaciencia.init();
+});
+
+// ============================================
+// 🔔 GERENCIADOR DE NOTIFICAÇÕES PUSH
+// ============================================
+
+// Horários diários agendados (no fuso de Brasília)
+const HORARIOS_NOTIFICACAO = ['10:00', '12:30', '15:00'];
+
+const NotificacaoManager = {
+
+    temSuporte() {
+        return ('Notification' in window) && ('serviceWorker' in navigator);
+    },
+
+    estadoPermissao() {
+        if (!this.temSuporte()) return 'unsupported';
+        return Notification.permission;
+    },
+
+    formatarMoeda(valor) {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    },
+
+    obterTotalAcumulado() {
+        return parseFloat(localStorage.getItem('totalAcumulado') || '0');
+    },
+
+    // Persiste o total calculado em localStorage + Cache Storage (para o Service Worker)
+    async salvarTotalAcumulado(valor) {
+        localStorage.setItem('totalAcumulado', String(valor));
+        try {
+            const cache = await caches.open('milionarios-app-data-v1');
+            await cache.put('total-acumulado', new Response(JSON.stringify({
+                valor,
+                atualizadoEm: new Date().toISOString()
+            })));
+        } catch (err) {
+            console.warn('[Notificações] Erro ao salvar total no cache:', err);
+        }
+    },
+
+    // Solicita permissão ao usuário
+    async solicitar() {
+        if (!this.temSuporte()) {
+            alert('Seu navegador não suporta notificações push.');
+            return false;
+        }
+        if (Notification.permission === 'denied') {
+            alert(
+                '🔕 Notificações bloqueadas!\n\n' +
+                'Para ativar, clique no ícone de cadeado/informações na barra de endereço ' +
+                'do navegador e permita as notificações para este site.'
+            );
+            return false;
+        }
+        const permissao = await Notification.requestPermission();
+        if (permissao === 'granted') {
+            await this.ativar();
+            this.atualizarBotao();
+            await this.checarNovoResultado();
+            return true;
+        }
+        this.atualizarBotao();
+        return false;
+    },
+
+    // Registra Periodic Background Sync (Chrome/Android) com intervalo de 1h
+    async ativar() {
+        try {
+            const registro = await navigator.serviceWorker.ready;
+            if ('periodicSync' in registro) {
+                const perm = await navigator.permissions.query({ name: 'periodic-background-sync' });
+                if (perm.state === 'granted') {
+                    await registro.periodicSync.register('check-lotofacil-resultado', {
+                        minInterval: 60 * 60 * 1000 // 1 hora — suficiente para pegar 10h, 12:30h e 15h
+                    });
+                    console.log('[Notificações] Periodic sync registrado (intervalo: 1h).');
+                }
+            }
+            localStorage.setItem('notificacoesAtivas', 'true');
+        } catch (err) {
+            console.warn('[Notificações] Erro ao registrar periodic sync:', err);
+        }
+    },
+
+    async desativar() {
+        try {
+            const registro = await navigator.serviceWorker.ready;
+            if ('periodicSync' in registro) {
+                await registro.periodicSync.unregister('check-lotofacil-resultado');
+            }
+        } catch (_) {}
+        localStorage.removeItem('notificacoesAtivas');
+        localStorage.removeItem('ultimoConcursoNotificado');
+        // Limpa chaves de horário agendado
+        HORARIOS_NOTIFICACAO.forEach(h => localStorage.removeItem(`notif_horario_${h.replace(':', '_')}`));
+        this.atualizarBotao();
+        console.log('[Notificações] Notificações desativadas.');
+    },
+
+    // Dispara notificação via Service Worker
+    async _mostrarNotificacao(titulo, opcoes) {
+        try {
+            const registro = await navigator.serviceWorker.ready;
+            await registro.showNotification(titulo, opcoes);
+        } catch (err) {
+            console.warn('[Notificações] Erro ao exibir notificação:', err);
+        }
+    },
+
+    // ─────────────────────────────────────────────
+    // Notificação de RESULTADO encontrado
+    // Mostra: números sorteados + jogos premiados + total acumulado
+    // ─────────────────────────────────────────────
+    async notificarResultadoEncontrado(resultados) {
+        if (Notification.permission !== 'granted') return;
+        if (!resultados || resultados.length === 0) return;
+
+        const ultimoResultado = resultados[resultados.length - 1];
+        const ultimoNotificado = parseInt(localStorage.getItem('ultimoConcursoNotificado') || '0');
+        if (ultimoResultado.concurso <= ultimoNotificado) return;
+
+        localStorage.setItem('ultimoConcursoNotificado', String(ultimoResultado.concurso));
+
+        // Calcula jogos premiados neste concurso
+        let jogosGanhadores = 0;
+        let premioTotalConcurso = 0;
+
+        if (ultimoResultado.dados && ultimoResultado.dados.listaRateioPremio) {
+            jogos.forEach(jogo => {
+                const acertos = jogo.filter(n => ultimoResultado.numerosSorteados.includes(n)).length;
+                if (acertos >= 11) {
+                    const faixa = 16 - acertos;
+                    const premio = ultimoResultado.dados.listaRateioPremio.find(p => p.faixa === faixa);
+                    if (premio) {
+                        premioTotalConcurso += premio.valorPremio;
+                        jogosGanhadores++;
+                    }
+                }
+            });
+        }
+
+        const numeros = ultimoResultado.numerosSorteados
+            .slice().sort((a, b) => a - b).join(' - ');
+        const totalAcumulado = this.obterTotalAcumulado();
+
+        let corpoMsg = `Concurso ${ultimoResultado.concurso} • ${ultimoResultado.data}\n🎲 ${numeros}`;
+        if (jogosGanhadores > 0) {
+            corpoMsg += `\n🏆 ${jogosGanhadores} jogo(s) premiado(s)! +${this.formatarMoeda(premioTotalConcurso)}`;
+        } else {
+            corpoMsg += '\n😔 Nenhum jogo com 11+ pontos desta vez';
+        }
+        if (totalAcumulado > 0) {
+            corpoMsg += `\n💰 Total acumulado: ${this.formatarMoeda(totalAcumulado)}`;
+        }
+
+        await this._mostrarNotificacao('🍀 Resultado Lotofácil!', {
+            body: corpoMsg,
+            icon: './logo.svg',
+            badge: './logo.svg',
+            tag: 'lotofacil-resultado',
+            requireInteraction: jogosGanhadores > 0,
+            vibrate: jogosGanhadores > 0 ? [300, 100, 300, 100, 300] : [200, 100, 200],
+            data: { url: './' },
+            actions: [
+                { action: 'view', title: '👁️ Ver Detalhes' },
+                { action: 'close', title: '✖ Fechar' }
+            ]
+        });
+    },
+
+    // ─────────────────────────────────────────────
+    // Verifica se está na hora de 10:00, 12:30 ou 15:00 e dispara
+    // ─────────────────────────────────────────────
+    async verificarHorarioAgendado() {
+        if (Notification.permission !== 'granted') return;
+        if (localStorage.getItem('notificacoesAtivas') !== 'true') return;
+
+        const agora = new Date();
+        const hojeStr = agora.toDateString();
+
+        // Hora atual no fuso de Brasília
+        const horaBR = new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false
+        }).format(agora);
+
+        for (const horario of HORARIOS_NOTIFICACAO) {
+            const chave = `notif_horario_${horario.replace(':', '_')}`;
+            if (horaBR === horario && localStorage.getItem(chave) !== hojeStr) {
+                localStorage.setItem(chave, hojeStr);
+
+                const total = this.obterTotalAcumulado();
+                const corpo = total > 0
+                    ? `💰 Total acumulado: ${this.formatarMoeda(total)}`
+                    : '📱 Abra o app para verificar os resultados!';
+
+                await this._mostrarNotificacao('🦁 Milionários da Leograf', {
+                    body: `⏰ ${horario}h — ${corpo}`,
+                    icon: './logo.svg',
+                    badge: './logo.svg',
+                    tag: `horario-${horario.replace(':', '_')}`,
+                    vibrate: [100, 50, 100],
+                    data: { url: './' },
+                    actions: [
+                        { action: 'view', title: '🔍 Ver no App' },
+                        { action: 'close', title: '✖ Fechar' }
+                    ]
+                });
+                console.log(`[Notificações] Notificação de ${horario}h enviada.`);
+            }
+        }
+    },
+
+    // Inicia verificação a cada 30 s quando o app está aberto
+    iniciarAgendamentoDiario() {
+        if (!this.temSuporte()) return;
+        this.verificarHorarioAgendado();
+        setInterval(() => this.verificarHorarioAgendado(), 30 * 1000);
+        console.log('[Notificações] Agendamento diário ativo: 10:00 • 12:30 • 15:00');
+    },
+
+    // Verifica API ao abrir o app: se saiu resultado novo, notifica
+    async checarNovoResultado() {
+        if (Notification.permission !== 'granted') return;
+        try {
+            const resp = await fetch(
+                'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil',
+                { cache: 'no-store' }
+            );
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (!data.numero || !data.listaDezenas || data.listaDezenas.length === 0) return;
+
+            const ultimoNotificado = parseInt(localStorage.getItem('ultimoConcursoNotificado') || '0');
+            if (data.numero > ultimoNotificado) {
+                localStorage.setItem('ultimoConcursoNotificado', String(data.numero));
+                const numeros = data.listaDezenas.join(' - ');
+                const totalAcumulado = this.obterTotalAcumulado();
+                let corpoMsg = `Concurso ${data.numero} • ${data.dataApuracao || ''}\n🎲 ${numeros}`;
+                if (totalAcumulado > 0) {
+                    corpoMsg += `\n💰 Total acumulado: ${this.formatarMoeda(totalAcumulado)}`;
+                }
+                await this._mostrarNotificacao('🍀 Novo Resultado Lotofácil!', {
+                    body: corpoMsg,
+                    icon: './logo.svg',
+                    badge: './logo.svg',
+                    tag: 'lotofacil-resultado',
+                    requireInteraction: true,
+                    vibrate: [200, 100, 200],
+                    data: { url: './' },
+                    actions: [
+                        { action: 'view', title: '👁️ Ver Resultado' },
+                        { action: 'close', title: '✖ Fechar' }
+                    ]
+                });
+            }
+        } catch (err) {
+            console.warn('[Notificações] Erro ao checar resultado:', err);
+        }
+    },
+
+    atualizarBotao() {
+        const btn = document.getElementById('btnNotificacoes');
+        if (!btn) return;
+        const estado = this.estadoPermissao();
+        const ativo = localStorage.getItem('notificacoesAtivas') === 'true';
+
+        if (estado === 'unsupported') {
+            btn.textContent = '🔕 Notificações indisponíveis';
+            btn.disabled = true;
+            return;
+        }
+        if (estado === 'denied') {
+            btn.textContent = '🔕 Notificações bloqueadas';
+            btn.classList.add('btn-notificacoes--bloqueado');
+            btn.classList.remove('btn-notificacoes--ativo');
+            return;
+        }
+        if (estado === 'granted' && ativo) {
+            btn.textContent = '🔔 Notificações Ativas ✓';
+            btn.classList.add('btn-notificacoes--ativo');
+            btn.classList.remove('btn-notificacoes--bloqueado');
+        } else {
+            btn.textContent = '🔔 Ativar Notificações';
+            btn.classList.remove('btn-notificacoes--ativo');
+            btn.classList.remove('btn-notificacoes--bloqueado');
+        }
+    },
+
+    async toggle() {
+        const ativo = localStorage.getItem('notificacoesAtivas') === 'true'
+            && Notification.permission === 'granted';
+        if (ativo) {
+            await this.desativar();
+        } else {
+            await this.solicitar();
+        }
+    }
+};
+
+// ---- Inicialização ao carregar a página ----
+document.addEventListener('DOMContentLoaded', () => {
+    const btnNotificacoes = document.getElementById('btnNotificacoes');
+    if (btnNotificacoes) {
+        NotificacaoManager.atualizarBotao();
+        btnNotificacoes.addEventListener('click', () => NotificacaoManager.toggle());
+    }
+
+    // Inicia verificação dos horários agendados (enquanto o app está aberto)
+    NotificacaoManager.iniciarAgendamentoDiario();
+
+    // Se notificações já estavam ativas, checa se saiu resultado novo ao abrir o app
+    if (
+        NotificacaoManager.estadoPermissao() === 'granted' &&
+        localStorage.getItem('notificacoesAtivas') === 'true'
+    ) {
+        NotificacaoManager.checarNovoResultado();
+    }
 });

@@ -151,7 +151,10 @@ async function doBackgroundSync() {
   }
 }
 
-// Notificações Push (se implementar no futuro)
+// ============================================
+// 🔔 NOTIFICAÇÕES PUSH
+// ============================================
+
 self.addEventListener('push', event => {
   if (event.data) {
     const data = event.data.json();
@@ -159,20 +162,15 @@ self.addEventListener('push', event => {
       body: data.body,
       icon: './logo.svg',
       badge: './logo.svg',
-      tag: 'milionarios-notification',
+      tag: 'lotofacil-resultado',
       requireInteraction: true,
+      vibrate: [200, 100, 200],
+      data: { url: './' },
       actions: [
-        {
-          action: 'view',
-          title: 'Ver Resultado'
-        },
-        {
-          action: 'close',
-          title: 'Fechar'
-        }
+        { action: 'view', title: '👁️ Ver Resultado' },
+        { action: 'close', title: '✖ Fechar' }
       ]
     };
-    
     event.waitUntil(
       self.registration.showNotification(data.title, options)
     );
@@ -182,13 +180,148 @@ self.addEventListener('push', event => {
 // Clique em notificações
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  
-  if (event.action === 'view') {
+
+  if (event.action !== 'close') {
+    const urlAlvo = (event.notification.data && event.notification.data.url) || './';
     event.waitUntil(
-      clients.openWindow('./')
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+        for (const client of windowClients) {
+          if ('focus' in client) return client.focus();
+        }
+        return clients.openWindow(urlAlvo);
+      })
     );
   }
 });
+
+// ============================================
+// 🔄 PERIODIC BACKGROUND SYNC
+// ============================================
+
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'check-lotofacil-resultado') {
+    event.waitUntil(Promise.all([
+      verificarNovoResultadoSW(),
+      verificarHorariosSW()
+    ]));
+  }
+});
+
+// Lê o total acumulado salvo pelo app no Cache Storage
+async function lerTotalAcumuladoSW() {
+  try {
+    const appCache = await caches.open('milionarios-app-data-v1');
+    const resp = await appCache.match('total-acumulado');
+    if (!resp) return 0;
+    const dados = await resp.json();
+    return dados.valor || 0;
+  } catch (_) { return 0; }
+}
+
+// Formata valor como moeda BRL (disponível no SW moderno)
+function formatarMoedaSW(valor) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+}
+
+// Verifica se saiu resultado novo e notifica
+async function verificarNovoResultadoSW() {
+  try {
+    const resp = await fetch('https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil', {
+      cache: 'no-store'
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!data.numero || !data.listaDezenas || data.listaDezenas.length === 0) return;
+
+    const store = await caches.open('milionarios-notifications-v1');
+    const savedResp = await store.match('ultimo-concurso-notificado');
+    const ultimoNotificado = savedResp ? parseInt(await savedResp.text()) : 0;
+
+    if (data.numero > ultimoNotificado) {
+      await store.put('ultimo-concurso-notificado', new Response(String(data.numero)));
+
+      const numeros = data.listaDezenas.join(' - ');
+      const dataApuracao = data.dataApuracao || '';
+      const totalAcumulado = await lerTotalAcumuladoSW();
+      const totalTexto = totalAcumulado > 0
+        ? `\n💰 Total acumulado: ${formatarMoedaSW(totalAcumulado)}`
+        : '';
+
+      await self.registration.showNotification('🍀 Novo Resultado Lotofácil!', {
+        body: `Concurso ${data.numero} • ${dataApuracao}\n🎲 ${numeros}${totalTexto}`,
+        icon: './logo.svg',
+        badge: './logo.svg',
+        tag: 'lotofacil-resultado',
+        requireInteraction: true,
+        vibrate: [200, 100, 200],
+        data: { url: './' },
+        actions: [
+          { action: 'view', title: '👁️ Ver Resultado' },
+          { action: 'close', title: '✖ Fechar' }
+        ]
+      });
+    }
+  } catch (err) {
+    console.error('[SW] Erro ao verificar resultado:', err);
+  }
+}
+
+// Verifica se está na hora das notificações agendadas (10:00, 12:30, 15:00 BRT)
+async function verificarHorariosSW() {
+  try {
+    const agora = new Date();
+
+    // Hora e data no fuso de Brasília (com suporte a horário de verão via Intl)
+    const horaBR = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(agora); // ex: "10:00"
+
+    const dataBR = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo', dateStyle: 'short'
+    }).format(agora); // ex: "10/03/2026"
+
+    const HORARIOS = [
+      { chave: '10_00', horario: '10:00' },
+      { chave: '12_30', horario: '12:30' },
+      { chave: '15_00', horario: '15:00' }
+    ];
+
+    const store = await caches.open('milionarios-notifications-v1');
+    const totalAcumulado = await lerTotalAcumuladoSW();
+    const totalFormatado = totalAcumulado > 0 ? formatarMoedaSW(totalAcumulado) : null;
+
+    for (const h of HORARIOS) {
+      if (horaBR === h.horario) {
+        const chaveCache = `notif-horario-${h.chave}`;
+        const savedResp = await store.match(chaveCache);
+        const ultimaData = savedResp ? await savedResp.text() : '';
+
+        if (ultimaData !== dataBR) {
+          await store.put(chaveCache, new Response(dataBR));
+
+          const corpo = totalFormatado
+            ? `💰 Total acumulado: ${totalFormatado}`
+            : '📱 Abra o app para verificar os resultados!';
+
+          await self.registration.showNotification('🦁 Milionários da Leograf', {
+            body: `⏰ ${h.horario}h — ${corpo}`,
+            icon: './logo.svg',
+            badge: './logo.svg',
+            tag: `horario-${h.chave}`,
+            vibrate: [100, 50, 100],
+            data: { url: './' },
+            actions: [
+              { action: 'view', title: '🔍 Ver no App' },
+              { action: 'close', title: '✖ Fechar' }
+            ]
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[SW] Erro ao verificar horários agendados:', err);
+  }
+}
 
 // Log de informações do SW
 console.log('[SW] Service Worker Milionários da Leograf carregado!');
