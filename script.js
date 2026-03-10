@@ -126,38 +126,40 @@ menuItems.forEach(item => {
 // BUSCAR RESULTADO DA LOTOFÁCIL
 // ============================================
 
-// Jogos do bolão - 18 jogos (Teimosinha 24x a partir de 13/01/2026)
+// Jogos do bolão - 20 jogos (Teimosinha 24x a partir de 23/02/2026)
 const jogos = [
-    [1, 2, 3, 5, 7, 8, 9, 11, 13, 14, 15, 17, 18, 20, 21],
-    [1, 3, 4, 5, 6, 7, 9, 10, 11, 13, 15, 17, 19, 20, 21],
-    [1, 2, 3, 5, 7, 9, 11, 12, 13, 15, 16, 17, 18, 19, 20],
-    [1, 3, 4, 5, 7, 8, 9, 10, 13, 14, 15, 17, 18, 19, 21],
-    [1, 2, 3, 5, 7, 8, 9, 10, 12, 13, 15, 17, 19, 20, 21],
-    [1, 2, 3, 4, 5, 6, 7, 9, 13, 15, 16, 17, 18, 19, 21],
-    [1, 2, 3, 4, 5, 6, 7, 9, 11, 13, 15, 17, 18, 19, 20],
-    [1, 2, 3, 5, 7, 8, 9, 10, 11, 13, 15, 17, 18, 19, 21],
-    [1, 2, 3, 4, 5, 6, 7, 9, 11, 12, 13, 16, 17, 20, 21],
-    [1, 2, 3, 4, 5, 6, 7, 9, 11, 13, 14, 15, 17, 18, 21],
-    [2, 3, 4, 5, 6, 7, 9, 11, 13, 15, 17, 18, 19, 20, 21],
-    [2, 3, 5, 7, 8, 9, 10, 11, 13, 15, 17, 18, 19, 20, 21],
-    [2, 3, 4, 5, 6, 7, 9, 11, 13, 15, 16, 17, 18, 19, 20],
-    [2, 3, 5, 7, 8, 9, 11, 13, 14, 15, 17, 18, 19, 20, 21],
-    [2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 15, 17, 19, 20, 21],
-    [2, 3, 4, 5, 6, 7, 9, 11, 12, 13, 15, 17, 18, 20, 21],
-    [2, 3, 5, 7, 8, 9, 10, 11, 13, 14, 15, 17, 18, 19, 20],
-    [2, 3, 5, 7, 8, 9, 10, 11, 12, 13, 15, 17, 18, 20, 21]
+    [2, 4, 5, 8, 9, 10, 11, 14, 15, 18, 19, 20, 21, 22, 23],
+    [1, 3, 5, 6, 7, 10, 11, 13, 14, 17, 20, 21, 22, 23, 25],
+    [1, 2, 3, 6, 9, 10, 11, 13, 14, 15, 17, 18, 19, 21, 25],
+    [2, 4, 5, 6, 7, 9, 11, 12, 15, 17, 19, 20, 21, 22, 25],
+    [1, 2, 4, 6, 9, 10, 11, 14, 15, 16, 17, 20, 22, 23, 25],
+    [1, 4, 5, 7, 9, 10, 11, 12, 15, 17, 18, 20, 21, 22, 25],
+    [1, 2, 3, 5, 6, 7, 10, 11, 13, 14, 17, 18, 20, 21, 22],
+    [2, 3, 4, 6, 9, 10, 13, 14, 17, 19, 20, 21, 22, 23, 25],
+    [2, 3, 4, 7, 9, 10, 11, 13, 14, 15, 17, 18, 20, 21, 25],
+    [1, 2, 4, 6, 8, 9, 11, 12, 15, 16, 17, 18, 20, 22, 23],
+    [1, 2, 3, 5, 6, 9, 11, 12, 14, 18, 19, 20, 21, 23, 24],
+    [1, 3, 4, 6, 8, 12, 13, 15, 16, 17, 19, 20, 21, 23, 24],
+    [1, 4, 5, 6, 7, 8, 11, 12, 15, 16, 19, 20, 21, 22, 23],
+    [1, 2, 4, 6, 7, 9, 11, 14, 15, 16, 17, 20, 21, 22, 25],
+    [1, 4, 5, 6, 7, 10, 11, 12, 15, 17, 18, 20, 22, 23, 25],
+    [2, 4, 5, 7, 8, 9, 11, 14, 15, 18, 19, 20, 21, 22, 23],
+    [1, 2, 4, 7, 8, 10, 11, 12, 15, 16, 18, 20, 22, 23, 25],
+    [1, 4, 5, 8, 9, 10, 11, 14, 15, 16, 19, 20, 21, 22, 23],
+    [2, 3, 4, 5, 6, 7, 10, 11, 13, 14, 17, 19, 20, 21, 23],
+    [1, 3, 4, 7, 9, 10, 13, 14, 15, 17, 18, 19, 21, 22, 23]
 ];
 
-// Mapeamento de concursos - DINÂMICO desde o 3586 até o atual
-// Teimosinha de 24 sorteios a partir de 13/01/2026
+// Mapeamento de concursos - DINÂMICO desde o 3619 até o atual
+// Teimosinha de 24 sorteios a partir de 23/02/2026
 function gerarConcursosTeimosinha() {
     const concursos = [];
     // Usar formato com horário para evitar problemas de fuso horário
-    const dataInicio = new Date(2026, 0, 13); // 13/01/2026 - Concurso 3586 (Teimosinha 24x)
+    const dataInicio = new Date(2026, 1, 23); // 23/02/2026 - Concurso 3619 (Teimosinha 24x)
     const hoje = new Date();
     
     // Gerar todos os 24 concursos da teimosinha independente da data atual
-    let concursoAtual = 3586;
+    let concursoAtual = 3619;
     let dataAtual = new Date(dataInicio);
     
     const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
@@ -184,8 +186,8 @@ function gerarConcursosTeimosinha() {
         dataAtual.setDate(dataAtual.getDate() + 1);
     }
     
-    console.log(`📅 Gerados ${concursos.length} concursos para verificação (do 3586 até ${concursoAtual - 1})`);
-    console.log(`📊 Teimosinha 24x iniciada em 13/01/2026 - 18 jogos por sorteio`);
+    console.log(`📅 Gerados ${concursos.length} concursos para verificação (do 3619 até ${concursoAtual - 1})`);
+    console.log(`📊 Teimosinha 24x iniciada em 23/02/2026 - 20 jogos por sorteio`);
     return concursos;
 }
 
@@ -201,13 +203,13 @@ let todosResultados = [];
 btnBuscarResultado.addEventListener('click', async () => {
     try {
         // Mostrar loading no botão
-        btnBuscarResultado.textContent = '⏳ Verificando do concurso 3586 até o atual...';
+        btnBuscarResultado.textContent = '⏳ Verificando do concurso 3619 até o atual...';
         btnBuscarResultado.disabled = true;
 
         // Limpar resultados anteriores
         todosResultados = [];
 
-        console.log('🔍 Iniciando busca COMPLETA desde o concurso 3586...');
+        console.log('🔍 Iniciando busca COMPLETA desde o concurso 3619...');
         console.log(`📊 Total de concursos a verificar: ${concursosTeimosinha.length}`);
         console.log(`📅 Período: ${concursosTeimosinha[0].data} (${concursosTeimosinha[0].concurso}) até ${concursosTeimosinha[concursosTeimosinha.length - 1].data} (${concursosTeimosinha[concursosTeimosinha.length - 1].concurso})`);
 
@@ -215,7 +217,7 @@ btnBuscarResultado.addEventListener('click', async () => {
         let ultimoConcursoReal = null;
         let errosConsecutivos = 0;
 
-        // Buscar todos os concursos desde o 3586
+        // Buscar todos os concursos desde o 3619
         for (const concursoInfo of concursosTeimosinha) {
             try {
                 console.log(`📊 Buscando concurso ${concursoInfo.concurso} (${concursoInfo.data} - ${concursoInfo.dia})`);
@@ -268,7 +270,7 @@ btnBuscarResultado.addEventListener('click', async () => {
 
         console.log(`📋 RESULTADO DA BUSCA:`);
         console.log(`   ✅ Concursos encontrados: ${todosResultados.length}`);
-        console.log(`   📊 Período verificado: Concurso 3586 até ${ultimoConcursoReal || 'atual'}`);
+        console.log(`   📊 Período verificado: Concurso 3619 até ${ultimoConcursoReal || 'atual'}`);
         console.log(`   📅 Datas: ${todosResultados.length > 0 ? `${todosResultados[0].data} até ${todosResultados[todosResultados.length - 1].data}` : 'Nenhuma'}`);
 
         if (todosResultados.length === 0) {
@@ -646,7 +648,7 @@ function verificarTodosJogos(resultados) {
             📅 ${primeiroResultado.data} até ${ultimoResultado.data} (${resultados.length} concursos)
         </div>
         <div style="color: #f39c12; font-size: 16px; margin-top: 8px; font-weight: bold;">
-            🎯 Soma de todos os 18 jogos em TODOS os sorteios
+            🎯 Soma de todos os 20 jogos em TODOS os sorteios
         </div>
     `;
     resumoPremios.appendChild(totalDiv);
@@ -660,17 +662,17 @@ function verificarTodosJogos(resultados) {
 // ============================================
 function criarDadosSimulados() {
     console.log('🎭 Criando dados simulados para demonstração...');
-    console.log('📋 Teimosinha 24x a partir de 13/01/2026 (concurso 3586)');
+    console.log('📋 Teimosinha 24x a partir de 23/02/2026 (concurso 3619)');
     
     const dadosSimulados = [
         {
-            data: '13/01/2026',
-            concurso: 3586,
-            dia: 'Terça-feira',
+            data: '23/02/2026',
+            concurso: 3619,
+            dia: 'Segunda-feira',
             numerosSorteados: [1, 2, 3, 5, 7, 9, 11, 13, 15, 17, 18, 19, 20, 21, 22],
             dados: {
-                numero: 3586,
-                dataApuracao: '13/01/2026',
+                numero: 3619,
+                dataApuracao: '23/02/2026',
                 valorEstimadoProximoConcurso: 1500000,
                 listaDezenas: ['01', '02', '03', '05', '07', '09', '11', '13', '15', '17', '18', '19', '20', '21', '22'],
                 listaRateioPremio: [
@@ -683,13 +685,13 @@ function criarDadosSimulados() {
             }
         },
         {
-            data: '14/01/2026',
-            concurso: 3587,
-            dia: 'Quarta-feira',
+            data: '24/02/2026',
+            concurso: 3620,
+            dia: 'Terça-feira',
             numerosSorteados: [2, 3, 5, 7, 9, 11, 13, 15, 17, 18, 19, 20, 21, 23, 25],
             dados: {
-                numero: 3587,
-                dataApuracao: '14/01/2026',
+                numero: 3620,
+                dataApuracao: '24/02/2026',
                 valorEstimadoProximoConcurso: 1600000,
                 listaDezenas: ['02', '03', '05', '07', '09', '11', '13', '15', '17', '18', '19', '20', '21', '23', '25'],
                 listaRateioPremio: [
@@ -702,13 +704,13 @@ function criarDadosSimulados() {
             }
         },
         {
-            data: '15/01/2026',
-            concurso: 3588,
-            dia: 'Quinta-feira',
+            data: '25/02/2026',
+            concurso: 3621,
+            dia: 'Quarta-feira',
             numerosSorteados: [1, 3, 5, 7, 9, 11, 13, 15, 17, 18, 19, 20, 21, 22, 24],
             dados: {
-                numero: 3588,
-                dataApuracao: '15/01/2026',
+                numero: 3621,
+                dataApuracao: '25/02/2026',
                 valorEstimadoProximoConcurso: 1700000,
                 listaDezenas: ['01', '03', '05', '07', '09', '11', '13', '15', '17', '18', '19', '20', '21', '22', '24'],
                 listaRateioPremio: [
@@ -721,13 +723,13 @@ function criarDadosSimulados() {
             }
         },
         {
-            data: '16/01/2026',
-            concurso: 3589,
-            dia: 'Sexta-feira',
+            data: '26/02/2026',
+            concurso: 3622,
+            dia: 'Quinta-feira',
             numerosSorteados: [1, 2, 3, 5, 7, 9, 11, 13, 15, 17, 18, 19, 20, 21, 23],
             dados: {
-                numero: 3589,
-                dataApuracao: '16/01/2026',
+                numero: 3622,
+                dataApuracao: '26/02/2026',
                 valorEstimadoProximoConcurso: 1800000,
                 listaDezenas: ['01', '02', '03', '05', '07', '09', '11', '13', '15', '17', '18', '19', '20', '21', '23'],
                 listaRateioPremio: [
@@ -756,32 +758,32 @@ let botoesTeimosinha = {
     contadorVerificados: 0
 };
 
-// Lista fixa dos 24 concursos da teimosinha (13/01/2026 a partir do concurso 3586)
+// Lista fixa dos 24 concursos da teimosinha (23/02/2026 a partir do concurso 3619)
 const teimosinhaConcursos = [
-    { numero: 1, data: '13/01/2026', dia: 'Terça-feira', concurso: 3586 },
-    { numero: 2, data: '14/01/2026', dia: 'Quarta-feira', concurso: 3587 },
-    { numero: 3, data: '15/01/2026', dia: 'Quinta-feira', concurso: 3588 },
-    { numero: 4, data: '16/01/2026', dia: 'Sexta-feira', concurso: 3589 },
-    { numero: 5, data: '17/01/2026', dia: 'Sábado', concurso: 3590 },
-    { numero: 6, data: '19/01/2026', dia: 'Segunda-feira', concurso: 3591 },
-    { numero: 7, data: '20/01/2026', dia: 'Terça-feira', concurso: 3592 },
-    { numero: 8, data: '21/01/2026', dia: 'Quarta-feira', concurso: 3593 },
-    { numero: 9, data: '22/01/2026', dia: 'Quinta-feira', concurso: 3594 },
-    { numero: 10, data: '23/01/2026', dia: 'Sexta-feira', concurso: 3595 },
-    { numero: 11, data: '24/01/2026', dia: 'Sábado', concurso: 3596 },
-    { numero: 12, data: '26/01/2026', dia: 'Segunda-feira', concurso: 3597 },
-    { numero: 13, data: '27/01/2026', dia: 'Terça-feira', concurso: 3598 },
-    { numero: 14, data: '28/01/2026', dia: 'Quarta-feira', concurso: 3599 },
-    { numero: 15, data: '29/01/2026', dia: 'Quinta-feira', concurso: 3600 },
-    { numero: 16, data: '30/01/2026', dia: 'Sexta-feira', concurso: 3601 },
-    { numero: 17, data: '31/01/2026', dia: 'Sábado', concurso: 3602 },
-    { numero: 18, data: '02/02/2026', dia: 'Segunda-feira', concurso: 3603 },
-    { numero: 19, data: '03/02/2026', dia: 'Terça-feira', concurso: 3604 },
-    { numero: 20, data: '04/02/2026', dia: 'Quarta-feira', concurso: 3605 },
-    { numero: 21, data: '05/02/2026', dia: 'Quinta-feira', concurso: 3606 },
-    { numero: 22, data: '06/02/2026', dia: 'Sexta-feira', concurso: 3607 },
-    { numero: 23, data: '07/02/2026', dia: 'Sábado', concurso: 3608 },
-    { numero: 24, data: '09/02/2026', dia: 'Segunda-feira', concurso: 3609 }
+    { numero: 1, data: '23/02/2026', dia: 'Segunda-feira', concurso: 3619 },
+    { numero: 2, data: '24/02/2026', dia: 'Terça-feira', concurso: 3620 },
+    { numero: 3, data: '25/02/2026', dia: 'Quarta-feira', concurso: 3621 },
+    { numero: 4, data: '26/02/2026', dia: 'Quinta-feira', concurso: 3622 },
+    { numero: 5, data: '27/02/2026', dia: 'Sexta-feira', concurso: 3623 },
+    { numero: 6, data: '28/02/2026', dia: 'Sábado', concurso: 3624 },
+    { numero: 7, data: '02/03/2026', dia: 'Segunda-feira', concurso: 3625 },
+    { numero: 8, data: '03/03/2026', dia: 'Terça-feira', concurso: 3626 },
+    { numero: 9, data: '04/03/2026', dia: 'Quarta-feira', concurso: 3627 },
+    { numero: 10, data: '05/03/2026', dia: 'Quinta-feira', concurso: 3628 },
+    { numero: 11, data: '06/03/2026', dia: 'Sexta-feira', concurso: 3629 },
+    { numero: 12, data: '07/03/2026', dia: 'Sábado', concurso: 3630 },
+    { numero: 13, data: '09/03/2026', dia: 'Segunda-feira', concurso: 3631 },
+    { numero: 14, data: '10/03/2026', dia: 'Terça-feira', concurso: 3632 },
+    { numero: 15, data: '11/03/2026', dia: 'Quarta-feira', concurso: 3633 },
+    { numero: 16, data: '12/03/2026', dia: 'Quinta-feira', concurso: 3634 },
+    { numero: 17, data: '13/03/2026', dia: 'Sexta-feira', concurso: 3635 },
+    { numero: 18, data: '14/03/2026', dia: 'Sábado', concurso: 3636 },
+    { numero: 19, data: '16/03/2026', dia: 'Segunda-feira', concurso: 3637 },
+    { numero: 20, data: '17/03/2026', dia: 'Terça-feira', concurso: 3638 },
+    { numero: 21, data: '18/03/2026', dia: 'Quarta-feira', concurso: 3639 },
+    { numero: 22, data: '19/03/2026', dia: 'Quinta-feira', concurso: 3640 },
+    { numero: 23, data: '20/03/2026', dia: 'Sexta-feira', concurso: 3641 },
+    { numero: 24, data: '21/03/2026', dia: 'Sábado', concurso: 3642 }
 ];
 
 // Inicializar os 24 botões quando a página carregar
@@ -969,7 +971,7 @@ async function verificarJogosDoConursoTeimosinha(concursoResultado) {
     const jogosResultado = [];
     let totalConcurso = 0;
     
-    // Verificar cada um dos 18 jogos
+    // Verificar cada um dos 20 jogos
     jogos.forEach((jogo, indexJogo) => {
         const acertos = jogo.filter(num => concursoResultado.numerosSorteados.includes(num));
         const totalAcertos = acertos.length;
