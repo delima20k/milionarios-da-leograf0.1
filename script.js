@@ -304,6 +304,9 @@ btnBuscarResultado.addEventListener('click', async () => {
 
         // Notificar no celular: jogos premiados + total acumulado
         NotificacaoManager.notificarResultadoEncontrado(todosResultados);
+
+        // Celebração visual no app (confetes + modal) se houver 13+ pontos
+        CelebracaoManager.verificarECelebrar(todosResultados);
         
         // Scroll suave até o resultado
         resultadoContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1775,6 +1778,153 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================
+// 🎊 GERENCIADOR DE CELEBRAÇÃO (CONFETES + MODAL)
+// ============================================
+
+const CelebracaoManager = {
+
+    _particulas: [],
+    _animFrameId: null,
+    _canvas: null,
+    _ctx: null,
+
+    // Cores dos confetes
+    _cores: ['#f39c12','#2ecc71','#3498db','#e74c3c','#9b59b6','#1abc9c','#f1c40f','#ffffff'],
+
+    _criarParticula(w, h) {
+        return {
+            x: Math.random() * w,
+            y: Math.random() * h - h,
+            r: Math.random() * 6 + 4,
+            d: Math.random() * 2 + 1,
+            cor: this._cores[Math.floor(Math.random() * this._cores.length)],
+            tilt: Math.random() * 10 - 5,
+            oscilacao: Math.random() * 0.1,
+            angulo: Math.random() * Math.PI * 2,
+            rotacao: (Math.random() - 0.5) * 0.2,
+        };
+    },
+
+    _desenharFrame() {
+        const { _canvas: cv, _ctx: ctx, _particulas: parts } = this;
+        if (!cv || !ctx) return;
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        parts.forEach(p => {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angulo);
+            ctx.fillStyle = p.cor;
+            ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 2.5);
+            ctx.restore();
+            p.y += p.d + 1;
+            p.x += Math.sin(p.angulo) * 1.5;
+            p.angulo += p.rotacao;
+            p.tilt += p.oscilacao;
+            // reinicia quando sai da tela
+            if (p.y > cv.height + 10) {
+                p.y = -10;
+                p.x = Math.random() * cv.width;
+            }
+        });
+        this._animFrameId = requestAnimationFrame(() => this._desenharFrame());
+    },
+
+    _pararConfetes() {
+        if (this._animFrameId) {
+            cancelAnimationFrame(this._animFrameId);
+            this._animFrameId = null;
+        }
+    },
+
+    _iniciarConfetes(qtd = 140) {
+        const cv = document.getElementById('celebracaoCanvas');
+        if (!cv) return;
+        const conteudo = document.getElementById('celebracaoConteudo');
+        cv.width  = conteudo.offsetWidth;
+        cv.height = conteudo.offsetHeight;
+        this._canvas = cv;
+        this._ctx    = cv.getContext('2d');
+        this._particulas = Array.from({ length: qtd }, () =>
+            this._criarParticula(cv.width, cv.height)
+        );
+        this._desenharFrame();
+    },
+
+    // Abre o modal com o texto e estilo corretos
+    abrir(nivel, valorConcurso, totalAcumulado) {
+        const modal  = document.getElementById('celebracaoModal');
+        const conteudo = document.getElementById('celebracaoConteudo');
+        const textoEl  = document.getElementById('celebracaoTexto');
+        const btnFechar = document.getElementById('btnFecharCelebracao');
+        if (!modal || !textoEl) return;
+
+        const moeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+        let bg, tituloHTML, mensagem, qtdConfetes;
+
+        if (nivel === 15) {
+            bg          = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
+            tituloHTML  = '🏆🎊🎉 ESTAMOS MILIONÁRIOS! 🎉🎊🏆';
+            mensagem    = `Acertamos 15 pontos!\n\n💎 Prêmio deste concurso:\n${moeda(valorConcurso)}\n\n💰 Total acumulado:\n${moeda(totalAcumulado)}`;
+            qtdConfetes = 200;
+        } else if (nivel === 14) {
+            bg          = 'linear-gradient(135deg, #0d2137 0%, #1a3a5c 60%, #0d2137 100%)';
+            tituloHTML  = '🎊🎉 Parabéns! 14 Pontos! 🎉🎊';
+            mensagem    = `Acertamos 14 pontos!\n\n💵 Prêmio deste concurso:\n${moeda(valorConcurso)}\n\n💰 Total acumulado:\n${moeda(totalAcumulado)}`;
+            qtdConfetes = 150;
+        } else {
+            // 13 pts
+            bg          = 'linear-gradient(135deg, #0d2713 0%, #1a4d2e 60%, #0d2713 100%)';
+            tituloHTML  = '🎯 Nós ganhamos 13 pontos!';
+            mensagem    = `${mensagem = `13 pontos!\n\n💵 Prêmio deste concurso:\n${moeda(valorConcurso)}\n\n💰 Total acumulado:\n${moeda(totalAcumulado)}`}`;
+            qtdConfetes = 100;
+        }
+
+        conteudo.style.background = bg;
+        textoEl.innerHTML =
+            `<span class="cel-titulo">${tituloHTML}</span>${mensagem}`;
+
+        modal.style.display = 'flex';
+        this._pararConfetes();
+        setTimeout(() => this._iniciarConfetes(qtdConfetes), 50);
+
+        const fechar = () => {
+            modal.style.display = 'none';
+            this._pararConfetes();
+        };
+        btnFechar.onclick = fechar;
+        modal.onclick = e => { if (e.target === modal) fechar(); };
+    },
+
+    // Verifica todos os resultados e abre a celebração para a melhor pontuação
+    verificarECelebrar(resultados) {
+        if (!resultados || resultados.length === 0) return;
+
+        let melhorPts = 0;
+        let valorMelhor = 0;
+        const totalAcumulado = NotificacaoManager.obterTotalAcumulado();
+
+        resultados.forEach(resultado => {
+            if (!resultado.dados || !resultado.dados.listaRateioPremio) return;
+            jogos.forEach(jogo => {
+                const acertos = jogo.filter(n => resultado.numerosSorteados.includes(n)).length;
+                if (acertos >= 13 && acertos > melhorPts) {
+                    const faixa = 16 - acertos;
+                    const premioObj = resultado.dados.listaRateioPremio.find(p => p.faixa === faixa);
+                    melhorPts   = acertos;
+                    valorMelhor = premioObj ? premioObj.valorPremio : 0;
+                }
+            });
+        });
+
+        if (melhorPts >= 13) {
+            // Pequeno delay para o DOM dos resultados já estar renderizado
+            setTimeout(() => this.abrir(melhorPts, valorMelhor, totalAcumulado), 800);
+        }
+    }
+};
+
+// ============================================
 // 🔔 GERENCIADOR DE NOTIFICAÇÕES PUSH
 // ============================================
 
@@ -1885,7 +2035,11 @@ const NotificacaoManager = {
 
     // ─────────────────────────────────────────────
     // Notificação de RESULTADO encontrado
-    // Mostra: números sorteados + jogos premiados + total acumulado
+    // Monta a mensagem de acordo com a melhor pontuação:
+    //   11-12 pts → mensagem simples
+    //   13 pts    → "Nós ganhamos 13 pontos! Deu R$..."
+    //   14 pts    → "Parabéns! Acertamos 14 pontos! 🎊 Deu R$..."
+    //   15 pts    → "🏆 ESTAMOS MILIONÁRIOS! 🏆" com confetes
     // ─────────────────────────────────────────────
     async notificarResultadoEncontrado(resultados) {
         if (Notification.permission !== 'granted') return;
@@ -1897,48 +2051,121 @@ const NotificacaoManager = {
 
         localStorage.setItem('ultimoConcursoNotificado', String(ultimoResultado.concurso));
 
-        // Calcula jogos premiados neste concurso
-        let jogosGanhadores = 0;
+        // ── Analisa cada jogo no último concurso ──
+        const faixaAcertos = { 11: [], 12: [], 13: [], 14: [], 15: [] };
         let premioTotalConcurso = 0;
+        let melhorPts = 0;
 
         if (ultimoResultado.dados && ultimoResultado.dados.listaRateioPremio) {
-            jogos.forEach(jogo => {
+            jogos.forEach((jogo, idx) => {
                 const acertos = jogo.filter(n => ultimoResultado.numerosSorteados.includes(n)).length;
                 if (acertos >= 11) {
                     const faixa = 16 - acertos;
-                    const premio = ultimoResultado.dados.listaRateioPremio.find(p => p.faixa === faixa);
-                    if (premio) {
-                        premioTotalConcurso += premio.valorPremio;
-                        jogosGanhadores++;
-                    }
+                    const premioObj = ultimoResultado.dados.listaRateioPremio.find(p => p.faixa === faixa);
+                    const val = premioObj ? premioObj.valorPremio : 0;
+                    faixaAcertos[acertos].push({ jogoNum: idx + 1, valor: val });
+                    premioTotalConcurso += val;
+                    if (acertos > melhorPts) melhorPts = acertos;
                 }
             });
         }
 
-        const numeros = ultimoResultado.numerosSorteados
-            .slice().sort((a, b) => a - b).join(' - ');
+        const numeros = ultimoResultado.numerosSorteados.slice().sort((a, b) => a - b).join(' - ');
         const totalAcumulado = this.obterTotalAcumulado();
+        const cabecalho = `Concurso ${ultimoResultado.concurso} • ${ultimoResultado.data}`;
+        const linhaNumeros = `🎲 ${numeros}`;
+        const linhaTotal = totalAcumulado > 0 ? `\n💰 Total acumulado: ${this.formatarMoeda(totalAcumulado)}` : '';
 
-        let corpoMsg = `Concurso ${ultimoResultado.concurso} • ${ultimoResultado.data}\n🎲 ${numeros}`;
-        if (jogosGanhadores > 0) {
-            corpoMsg += `\n🏆 ${jogosGanhadores} jogo(s) premiado(s)! +${this.formatarMoeda(premioTotalConcurso)}`;
+        // ── Helpers ──
+        const somaPremios = arr => arr.reduce((s, j) => s + j.valor, 0);
+        const pluralJogos = n => n === 1 ? '1 jogo' : `${n} jogos`;
+
+        // ── Monta título, corpo e vibração conforme melhor pontuação ──
+        let titulo, corpo, vibrar, requireInteraction, acaoBtn;
+
+        if (melhorPts === 15) {
+            // ───────── 15 PONTOS — MILIONÁRIOS ─────────
+            const g15 = faixaAcertos[15];
+            const val15 = somaPremios(g15);
+            titulo = '🏆🎊🎉 ESTAMOS MILIONÁRIOS! 🎉🎊🏆';
+            corpo  = `${cabecalho}\n${linhaNumeros}\n\n` +
+                     `🏆🥂🎊 ACERTAMOS 15 PONTOS! 🎊🥂🏆\n` +
+                     `🎉🎉🎉 ${pluralJogos(g15.length)} premiado(s)!\n` +
+                     `💎 PRÊMIO: ${this.formatarMoeda(val15)}` +
+                     `${linhaTotal}`;
+            vibrar = [500, 100, 500, 100, 500, 100, 500, 100, 500];
+            requireInteraction = true;
+            acaoBtn = '🏆 VER NOSSA VITÓRIA!';
+
+        } else if (melhorPts === 14) {
+            // ───────── 14 PONTOS ─────────
+            const g14 = faixaAcertos[14];
+            const val14 = somaPremios(g14);
+            // Detalhe de 13 pts se houver
+            const extra13 = faixaAcertos[13].length > 0
+                ? `\n🎯 Também: ${pluralJogos(faixaAcertos[13].length)} com 13pts (+${this.formatarMoeda(somaPremios(faixaAcertos[13]))})`
+                : '';
+            titulo = '🎊🎉 Parabéns! Acertamos 14 pontos! 🎉🎊';
+            corpo  = `${cabecalho}\n${linhaNumeros}\n\n` +
+                     `🎊🎊 ${pluralJogos(g14.length)} com 14 pontos!\n` +
+                     `💵 Deu ${this.formatarMoeda(val14)}` +
+                     `${extra13}` +
+                     `${linhaTotal}`;
+            vibrar = [300, 100, 300, 100, 300, 100, 300];
+            requireInteraction = true;
+            acaoBtn = '🎊 Ver os ganhadores!';
+
+        } else if (melhorPts === 13) {
+            // ───────── 13 PONTOS ─────────
+            const g13 = faixaAcertos[13];
+            const val13 = somaPremios(g13);
+            // Detalhe de 12/11 pts se houver
+            const extra12 = faixaAcertos[12].length > 0
+                ? `\n✅ Também: ${pluralJogos(faixaAcertos[12].length)} com 12pts (+${this.formatarMoeda(somaPremios(faixaAcertos[12]))})`
+                : '';
+            titulo = '🎯 Nós ganhamos 13 pontos!';
+            corpo  = `${cabecalho}\n${linhaNumeros}\n\n` +
+                     `🎯 ${pluralJogos(g13.length)} com 13 pontos!\n` +
+                     `💵 Deu ${this.formatarMoeda(val13)}` +
+                     `${extra12}` +
+                     `${linhaTotal}`;
+            vibrar = [200, 100, 200, 100, 200];
+            requireInteraction = true;
+            acaoBtn = '🎯 Ver detalhes';
+
+        } else if (melhorPts >= 11) {
+            // ───────── 11-12 PONTOS ─────────
+            const totalJogos = faixaAcertos[11].length + faixaAcertos[12].length;
+            titulo = '🍀 Resultado Lotofácil!';
+            corpo  = `${cabecalho}\n${linhaNumeros}\n\n` +
+                     `🏅 ${pluralJogos(totalJogos)} premiado(s) (11-12 pts)\n` +
+                     `💵 +${this.formatarMoeda(premioTotalConcurso)}` +
+                     `${linhaTotal}`;
+            vibrar = [200, 100, 200];
+            requireInteraction = false;
+            acaoBtn = '👁️ Ver detalhes';
+
         } else {
-            corpoMsg += '\n😔 Nenhum jogo com 11+ pontos desta vez';
-        }
-        if (totalAcumulado > 0) {
-            corpoMsg += `\n💰 Total acumulado: ${this.formatarMoeda(totalAcumulado)}`;
+            // ───────── SEM PRÊMIO ─────────
+            titulo = '🍀 Resultado Lotofácil!';
+            corpo  = `${cabecalho}\n${linhaNumeros}\n\n` +
+                     `😔 Nenhum jogo com 11+ pontos desta vez` +
+                     `${linhaTotal}`;
+            vibrar = [100, 50, 100];
+            requireInteraction = false;
+            acaoBtn = '👁️ Ver resultado';
         }
 
-        await this._mostrarNotificacao('🍀 Resultado Lotofácil!', {
-            body: corpoMsg,
+        await this._mostrarNotificacao(titulo, {
+            body: corpo,
             icon: './logo.svg',
             badge: './logo.svg',
             tag: 'lotofacil-resultado',
-            requireInteraction: jogosGanhadores > 0,
-            vibrate: jogosGanhadores > 0 ? [300, 100, 300, 100, 300] : [200, 100, 200],
+            requireInteraction,
+            vibrate: vibrar,
             data: { url: './' },
             actions: [
-                { action: 'view', title: '👁️ Ver Detalhes' },
+                { action: 'view', title: acaoBtn },
                 { action: 'close', title: '✖ Fechar' }
             ]
         });
