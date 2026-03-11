@@ -23,13 +23,13 @@
     
     <!-- Icons and Manifest -->
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="logo.svg">
-    <link rel="apple-touch-icon" href="logo.svg">
-    <link rel="apple-touch-icon" sizes="180x180" href="logo.svg">
-    <link rel="mask-icon" href="logo.svg" color="#2ecc71">
+    <link rel="icon" type="image/png" href="logo-header.png">
+    <link rel="apple-touch-icon" href="logo-header.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="logo-header.png">
+    <link rel="mask-icon" href="logo-header.png" color="#2ecc71">
     
     <!-- Microsoft Tiles -->
-    <meta name="msapplication-TileImage" content="logo.svg">
+    <meta name="msapplication-TileImage" content="logo-header.png">
     <meta name="msapplication-TileColor" content="#2ecc71">
     <meta name="msapplication-config" content="browserconfig.xml">
     
@@ -37,15 +37,15 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="Milionários da Leograf - Bolão da Lotofácil">
     <meta property="og:description" content="Acompanhe os resultados do nosso bolão em tempo real!">
-    <meta property="og:image" content="logo.svg">
-    <meta property="og:url" content="https://seudominio.github.io/milinarios-da-leograf001/">
+    <meta property="og:image" content="logo-header.png">
+    <meta property="og:url" content="https://delima20k.github.io/milionarios-da-leograf0.1/">
     <meta property="og:site_name" content="Milionários da Leograf">
     
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Milionários da Leograf">
     <meta name="twitter:description" content="Bolão da Lotofácil em tempo real">
-    <meta name="twitter:image" content="logo.svg">
+    <meta name="twitter:image" content="logo-header.png">
     
     <title>Milionários da Leograf - Bolão da Lotofácil</title>
     <link rel="stylesheet" href="style.css">
@@ -80,45 +80,9 @@
         <!-- Container 3D com perspectiva -->
         <div class="splash-3d-container">
             
-            <!-- 💵 Nota de Real flutuando -->
-            <div class="nota-real">
-                <div class="nota-frente">
-                    <span class="nota-valor">R$ 100</span>
-                    <span class="nota-texto">REAIS</span>
-                </div>
-            </div>
+            <!-- 🦁 Logo da splash screen -->
+            <img src="logo-splash.png" alt="Loto Bolão" class="splash-logo-img">
             
-            <!-- 🦁 Leão tentando pegar a nota -->
-            <div class="splash-leao">
-                <div class="leao-corpo">
-                    <!-- Juba animada -->
-                    <div class="splash-juba"></div>
-                    <!-- Cabeça -->
-                    <div class="splash-cabeca">
-                        <div class="splash-orelha-esq"></div>
-                        <div class="splash-orelha-dir"></div>
-                        <div class="splash-face">
-                            <div class="splash-olho-esq"></div>
-                            <div class="splash-olho-dir"></div>
-                            <div class="splash-focinho"></div>
-                            <div class="splash-nariz"></div>
-                            <div class="splash-boca"></div>
-                        </div>
-                    </div>
-                    <!-- Pata estendida para pegar nota -->
-                    <div class="splash-pata"></div>
-                </div>
-            </div>
-            
-            <!-- ✨ Partículas de brilho -->
-            <div class="splash-particles">
-                <span class="particle">✨</span>
-                <span class="particle">💰</span>
-                <span class="particle">🍀</span>
-                <span class="particle">⭐</span>
-                <span class="particle">💎</span>
-                <span class="particle">🎰</span>
-            </div>
         </div>
         
         <!-- Mensagens em cascata -->
@@ -134,22 +98,8 @@
 
     <header class="header">
         <div class="header-content">
-            <!-- 🦁 LEÃO CSS PURO - Ícone do App -->
-            <div class="leao-css" title="Milionários da Leograf">
-                <div class="leao-juba"></div>
-                <div class="leao-orelha-esq"></div>
-                <div class="leao-orelha-dir"></div>
-                <div class="leao-face"></div>
-                <div class="leao-sobrancelha-esq"></div>
-                <div class="leao-sobrancelha-dir"></div>
-                <div class="leao-olho-esq"></div>
-                <div class="leao-olho-dir"></div>
-                <div class="leao-focinho"></div>
-                <div class="leao-nariz"></div>
-                <div class="leao-boca"></div>
-                <div class="leao-bigode-esq"></div>
-                <div class="leao-bigode-dir"></div>
-            </div>
+            <!-- 🦁 Ícone do App -->
+            <img src="logo-header.png" alt="Milionários da Leograf" class="header-logo-img" title="Milionários da Leograf">
             
             <!-- Título -->
             <h1 class="header-title">Milionários da Leograf</h1>
@@ -522,13 +472,18 @@
         }
     </script>
 
-    <!-- OneSignal SDK — push quando o app está fechado -->
+    <!-- ================================================================
+         OneSignal SDK — envia push MESMO COM O APP FECHADO
+         ================================================================
+         App ID: 9fc449ea-ce6f-462d-a3eb-1476569c151b
+         ================================================================ -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(async function(OneSignal) {
             await OneSignal.init({
-                appId: "SEU_ONESIGNAL_APP_ID_AQUI", // ← substitua pelo App ID do OneSignal
+                appId: "9fc449ea-ce6f-462d-a3eb-1476569c151b",
+                safari_web_id: "web.onesignal.auto.34cabfa2-ddd9-46d0-b8b2-6fad793020e0",
                 serviceWorkerPath: "service-worker.js",
                 serviceWorkerParam: { scope: "./" },
                 notifyButton: { enable: false }
