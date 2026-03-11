@@ -773,6 +773,34 @@ body {
     gap: var(--espacamento-sm);
 }
 
+/* ==============================
+   📲 BOTÃO INSTALAR PWA
+   ============================== */
+.btn-instalar-pwa {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(46,204,113,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+    flex-shrink: 0;
+}
+.btn-instalar-pwa:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(46,204,113,0.55);
+}
+.btn-instalar-pwa:active {
+    transform: scale(0.96);
+}
+
 /* ========================================
    💵 ÍCONE DE DINHEIRO - CSS PURO REALISTA
    ========================================

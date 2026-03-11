@@ -104,6 +104,11 @@
             <!-- Título -->
             <h1 class="header-title">Milionários da Leograf</h1>
             
+            <!-- Botão Instalar PWA -->
+            <button id="btnInstalarPWA" class="btn-instalar-pwa" style="display:none" title="Instalar aplicativo">
+                &#8681; Instalar
+            </button>
+
             <!-- Menu Hambúrguer -->
             <div class="hamburger-menu" id="hamburger">
                 <div class="bar"></div>
@@ -477,6 +482,38 @@
          ================================================================
          App ID: 9fc449ea-ce6f-462d-a3eb-1476569c151b
          ================================================================ -->
+    <!-- ✅ Instalação PWA -->
+    <script>
+        (function () {
+            let _installPrompt = null;
+            const btn = document.getElementById('btnInstalarPWA');
+
+            window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                _installPrompt = e;
+                if (btn) btn.style.display = 'flex';
+            });
+
+            if (btn) {
+                btn.addEventListener('click', async function () {
+                    if (!_installPrompt) return;
+                    _installPrompt.prompt();
+                    const { outcome } = await _installPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        btn.style.display = 'none';
+                    }
+                    _installPrompt = null;
+                });
+            }
+
+            // Esconde o botão se já está instalado como PWA
+            window.addEventListener('appinstalled', function () {
+                if (btn) btn.style.display = 'none';
+                _installPrompt = null;
+            });
+        })();
+    </script>
+
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
         window.OneSignalDeferred = window.OneSignalDeferred || [];
