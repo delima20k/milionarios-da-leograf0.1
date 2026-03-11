@@ -217,7 +217,7 @@ async function verificarNovoResultadoSW() {
         tag: 'lotofacil-resultado',
         requireInteraction: true,
         vibrate: [200, 100, 200],
-        data: { url: './?autoVerificar=1' },
+        data: { url: self.registration.scope + '?autoVerificar=1' },
         actions: [
           { action: 'view', title: '👁️ Ver Resultado' },
           { action: 'close', title: '✖ Fechar' }
@@ -288,7 +288,7 @@ async function verificarHorariosSW() {
             badge: './logo-header.png',
             tag: `horario-${h.chave}`,
             vibrate: [100, 50, 100],
-            data: { url: './?autoVerificar=1' },
+            data: { url: self.registration.scope + '?autoVerificar=1' },
             actions: [
               { action: 'view', title: '🔍 Ver no App' },
               { action: 'close', title: '✖ Fechar' }
@@ -313,23 +313,23 @@ self.addEventListener('notificationclick', event => {
 
   if (event.action === 'close') return;
 
-  const targetUrl = (event.notification.data && event.notification.data.url)
-    ? event.notification.data.url
-    : './?autoVerificar=1';
+  // Monta URL absoluta a partir do scope do SW (evita 404 com URL relativa)
+  const scope = self.registration.scope; // ex: https://delima20k.github.io/milionarios-da-leograf0.1/
+  const targetUrl = scope + '?autoVerificar=1';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
       // Se o app já está aberto, foca e envia mensagem para disparar a busca
       for (const client of windowClients) {
         const clientUrl = new URL(client.url);
-        const swScope = new URL(self.registration.scope);
+        const swScope = new URL(scope);
         if (clientUrl.origin === swScope.origin && clientUrl.pathname.startsWith(swScope.pathname)) {
           client.focus();
           client.postMessage({ type: 'BUSCAR_RESULTADO' });
           return;
         }
       }
-      // App fechado — abre uma nova aba com autoVerificar=1
+      // App fechado — abre com URL absoluta
       return clients.openWindow(targetUrl);
     })
   );
