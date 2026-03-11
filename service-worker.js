@@ -1,9 +1,13 @@
 // Importa o Service Worker do OneSignal (push quando app está fechado)
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-const CACHE_NAME = 'milionarios-v6.2';
-const STATIC_CACHE = 'milionarios-static-v6.2';
-const DYNAMIC_CACHE = 'milionarios-dynamic-v6.2';
+const CACHE_NAME = 'milionarios-v6.3';
+const STATIC_CACHE = 'milionarios-static-v6.3';
+const DYNAMIC_CACHE = 'milionarios-dynamic-v6.3';
+
+// URL base absoluta derivada do próprio arquivo SW — sempre correta no PWA instalado
+// Ex: https://delima20k.github.io/milionarios-da-leograf0.1/
+const APP_BASE_URL = self.location.href.replace(/service-worker\.js(\?.*)?$/, '');
 
 // Recursos essenciais para cache
 const CORE_ASSETS = [
@@ -212,12 +216,12 @@ async function verificarNovoResultadoSW() {
 
       await self.registration.showNotification('🍀 Novo Resultado Lotofácil!', {
         body: `Concurso ${data.numero} • ${dataApuracao}\n🎲 ${numeros}${totalTexto}`,
-        icon: './logo-header.png',
-        badge: './logo-header.png',
+        icon: APP_BASE_URL + 'logo-header.png',
+        badge: APP_BASE_URL + 'logo-header.png',
         tag: 'lotofacil-resultado',
         requireInteraction: true,
         vibrate: [200, 100, 200],
-        data: { url: self.registration.scope + '?autoVerificar=1' },
+        data: { url: APP_BASE_URL + '?autoVerificar=1' },
         actions: [
           { action: 'view', title: '👁️ Ver Resultado' },
           { action: 'close', title: '✖ Fechar' }
@@ -284,11 +288,11 @@ async function verificarHorariosSW() {
 
           await self.registration.showNotification('🦁 Milionários da Leograf', {
             body: `⏰ ${h.label}h — ${corpo}`,
-            icon: './logo-header.png',
-            badge: './logo-header.png',
+            icon: APP_BASE_URL + 'logo-header.png',
+            badge: APP_BASE_URL + 'logo-header.png',
             tag: `horario-${h.chave}`,
             vibrate: [100, 50, 100],
-            data: { url: self.registration.scope + '?autoVerificar=1' },
+            data: { url: APP_BASE_URL + '?autoVerificar=1' },
             actions: [
               { action: 'view', title: '🔍 Ver no App' },
               { action: 'close', title: '✖ Fechar' }
@@ -309,27 +313,35 @@ console.log('[SW] Service Worker Milionários da Leograf carregado!');
 // 🔔 CLIQUE NA NOTIFICAÇÃO — Abre o app e auto-verifica
 // ============================================
 self.addEventListener('notificationclick', event => {
-  event.notification.close();
+  // Deixa o OneSignal tratar apenas as notificações dele (as que têm dados oneSignal)
+  // Para as nossas notificações locais (tag: lotofacil-resultado / horario-*), tratamos aqui
+  const tag = event.notification.tag || '';
+  const isNossaNotif = tag === 'lotofacil-resultado' || tag.startsWith('horario-');
+  if (!isNossaNotif) return; // deixa o OneSignal tratar as dele
 
+  event.notification.close();
   if (event.action === 'close') return;
 
-  // Monta URL absoluta a partir do scope do SW (evita 404 com URL relativa)
-  const scope = self.registration.scope; // ex: https://delima20k.github.io/milionarios-da-leograf0.1/
-  const targetUrl = scope + '?autoVerificar=1';
+  // URL absoluta garantida: usa self.location do SW para derivar a base
+  const targetUrl = APP_BASE_URL + '?autoVerificar=1';
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      // Se o app já está aberto, foca e envia mensagem para disparar a busca
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async windowClients => {
+      // Procura aba/janela do app já aberta
       for (const client of windowClients) {
         const clientUrl = new URL(client.url);
-        const swScope = new URL(scope);
-        if (clientUrl.origin === swScope.origin && clientUrl.pathname.startsWith(swScope.pathname)) {
-          client.focus();
-          client.postMessage({ type: 'BUSCAR_RESULTADO' });
+        const baseUrl   = new URL(APP_BASE_URL);
+        if (clientUrl.origin === baseUrl.origin &&
+            clientUrl.pathname.startsWith(baseUrl.pathname)) {
+          // Navega para a URL com autoVerificar e foca
+          if ('navigate' in client) {
+            await client.navigate(targetUrl);
+          }
+          await client.focus();
           return;
         }
       }
-      // App fechado — abre com URL absoluta
+      // App fechado — abre nova janela com URL absoluta dentro do escopo do PWA
       return clients.openWindow(targetUrl);
     })
   );
