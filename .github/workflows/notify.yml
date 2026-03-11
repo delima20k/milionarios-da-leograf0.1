@@ -1,18 +1,42 @@
 name: Notificações Milionários da Leograf
 
+# ─────────────────────────────────────────────────────────────────────────────
+# COMO FUNCIONA:
+#   GitHub Actions roda nos horários exatos abaixo e usa a API do OneSignal
+#   para enviar push para todos os celulares com o app instalado,
+#   MESMO COM O APP FECHADO.
+#
+# PRÉ-REQUISITO — configure estes valores no repositório do GitHub:
+#   Settings → Secrets and variables → Actions
+#   ┌─ Secrets ────────────────────────────────────────────────────────────
+#   │  ONESIGNAL_APP_ID         → App ID do seu app no OneSignal
+#   │  ONESIGNAL_REST_API_KEY   → REST API Key do OneSignal
+#   └──────────────────────────────────────────────────────────────────────
+#   ┌─ Variables ──────────────────────────────────────────────────────────
+#   │  APP_URL  → URL do site com barra no final
+#   │             Ex: https://seuusuario.github.io/milionarios-da-leograf/
+#   └──────────────────────────────────────────────────────────────────────
+#
+# Como obter o App ID e REST API Key do OneSignal:
+#   1. Acesse https://onesignal.com e crie uma conta gratuita
+#   2. Crie um novo App → Web Push → selecione "Typical Site"
+#   3. Coloque a URL do seu GitHub Pages e siga os passos
+#   4. App Settings → Keys & IDs → copie "App ID" e "REST API Key"
+#   5. Também copie o "App ID" e cole no index.html onde diz SEU_ONESIGNAL_APP_ID_AQUI
+# ─────────────────────────────────────────────────────────────────────────────
+
 on:
   schedule:
-    # Notificações diárias (horário de Brasília = UTC-3)
-    - cron: '0 13 * * *'    # 10:00 BRT
-    - cron: '20 16 * * *'   # 13:20 BRT
-    - cron: '0 18 * * *'    # 15:00 BRT
-    # Verificar resultado Lotofácil (sorteio ~20:00 BRT, seg-sáb)
-    - cron: '5 23 * * 1-6'  # 20:05 BRT, seg-sáb
-    - cron: '35 23 * * 1-6' # 20:35 BRT, seg-sáb
-    - cron: '5 0 * * 2-7'   # 21:05 BRT, ter-dom (cobre sorteio da véspera)
-  workflow_dispatch:         # Permite disparar manualmente pelo GitHub
+    # ── Lembretes diários (todos os dias) ──────── Horário de Brasília = UTC-3
+    - cron: '0 13 * * *'    # 10:00 BRT — lembrete matinal
+    - cron: '20 16 * * *'   # 13:20 BRT — lembrete tarde
+    - cron: '0 18 * * *'    # 15:00 BRT — lembrete tarde
+    # ── Resultado Lotofácil (sorteio ~20:00 BRT, segunda a sábado) ───────────
+    - cron: '35 23 * * 1-6' # 20:35 BRT seg-sáb — 1ª tentativa (logo após sorteio)
+    - cron: '30 0 * * 2-7'  # 21:30 BRT seg-sáb — 2ª tentativa (resultado consolidado)
+    - cron: '0 1 * * 2-7'   # 22:00 BRT seg-sáb — 3ª tentativa (fallback)
+  workflow_dispatch:          # Permite disparar manualmente pelo GitHub Actions
 
-# Necessário para ler/salvar cache do Actions (evitar notificação dupla)
 permissions:
   actions: write
 
@@ -21,12 +45,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ─────────────────────────────────────────────────────────────
-      # 1. NOTIFICAÇÃO DE HORÁRIO AGENDADO (10:00 / 13:05 / 15:00 BRT)
-      # ─────────────────────────────────────────────────────────────
-      - name: Notificação horário agendado
+      # ═══════════════════════════════════════════════════════════════════════
+      # PASSO 1 — LEMBRETE DE HORÁRIO (10:00 / 13:20 / 15:00 BRT)
+      # Notifica todos os assinantes para abrirem o app
+      # ═══════════════════════════════════════════════════════════════════════
+      - name: Notificação de horário agendado
         if: |
-          github.event.schedule == '0 13 * * *' ||
+          github.event.schedule == '0 13 * * *'  ||
           github.event.schedule == '20 16 * * *' ||
           github.event.schedule == '0 18 * * *'
         env:
@@ -34,64 +59,79 @@ jobs:
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
           APP_URL: ${{ vars.APP_URL }}
         run: |
+          if [ -z "$ONESIGNAL_APP_ID" ] || [ "$ONESIGNAL_APP_ID" = "SEU_ONESIGNAL_APP_ID_AQUI" ]; then
+            echo "⚠️  ONESIGNAL_APP_ID não configurado. Configure o Secret no GitHub."
+            exit 0
+          fi
+
           SCHEDULE="${{ github.event.schedule }}"
           case "$SCHEDULE" in
-            "0 13 * * *")  HORA="10:00" ;;
-            "20 16 * * *") HORA="13:20" ;;
-            "0 18 * * *")  HORA="15:00" ;;
+            "0 13 * * *")  HORA="10:00" EMOJI="🌅" ;;
+            "20 16 * * *") HORA="13:20" EMOJI="☀️"  ;;
+            "0 18 * * *")  HORA="15:00" EMOJI="🌤️"  ;;
             *) echo "Cron não reconhecido; saindo."; exit 0 ;;
           esac
 
-          echo "Enviando notificação de horário: $HORA BRT"
-          curl -sf -X POST "https://onesignal.com/api/v1/notifications" \
+          echo "📣 Enviando lembrete das ${HORA}h BRT..."
+          HTTP=$(curl -s -o /tmp/os_resp.json -w "%{http_code}" \
+            -X POST "https://onesignal.com/api/v1/notifications" \
             -H "Content-Type: application/json; charset=utf-8" \
             -H "Authorization: Basic $ONESIGNAL_API_KEY" \
             -d "{
               \"app_id\": \"$ONESIGNAL_APP_ID\",
               \"included_segments\": [\"Subscribed Users\"],
               \"headings\": {\"pt\": \"🦁 Milionários da Leograf\"},
-              \"contents\": {\"pt\": \"⏰ ${HORA}h — Abra o app para ver seus resultados!\"},
-              \"url\": \"${APP_URL}\",
-              \"chrome_web_icon\": \"${APP_URL}logo.svg\"
-            }" \
-            && echo "Notificação enviada com sucesso." \
-            || echo "Aviso: falha ao enviar (talvez nenhum assinante ainda)."
+              \"contents\": {\"pt\": \"${EMOJI} ${HORA}h — Abra o app e verifique seus resultados!\"},
+              \"url\": \"${APP_URL}?autoVerificar=1\",
+              \"chrome_web_icon\": \"${APP_URL}logo-header.png\",
+              \"firefox_icon\":    \"${APP_URL}logo-header.png\",
+              \"small_icon\":      \"logo-header\"
+            }")
+          echo "HTTP $HTTP — $(cat /tmp/os_resp.json)"
+          [ "$HTTP" = "200" ] && echo "✅ Lembrete enviado!" || echo "⚠️  Falha ao enviar (HTTP $HTTP)"
 
-      # ─────────────────────────────────────────────────────────────
-      # 2. VERIFICAR RESULTADO LOTOFÁCIL
-      # ─────────────────────────────────────────────────────────────
+      # ═══════════════════════════════════════════════════════════════════════
+      # PASSO 2 — BUSCAR RESULTADO DA LOTOFÁCIL NA API DA CAIXA
+      # Rodado nos crons de 20:35 / 21:30 / 22:00 BRT
+      # ═══════════════════════════════════════════════════════════════════════
       - name: Buscar resultado Lotofácil
         if: |
-          github.event.schedule == '5 23 * * 1-6'  ||
           github.event.schedule == '35 23 * * 1-6' ||
-          github.event.schedule == '5 0 * * 2-7'   ||
+          github.event.schedule == '30 0 * * 2-7'  ||
+          github.event.schedule == '0 1 * * 2-7'   ||
           github.event_name == 'workflow_dispatch'
         id: resultado
         run: |
-          RESULT=$(curl -sf --connect-timeout 15 \
+          echo "🔍 Consultando API da Caixa..."
+          RESULT=$(curl -sf --connect-timeout 20 --max-time 30 \
+            -H "Accept: application/json" \
             "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil" || echo "")
 
           if [ -z "$RESULT" ]; then
-            echo "API da Caixa indisponível. Saindo."
+            echo "❌ API da Caixa indisponível."
             echo "numero=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           CONCURSO=$(echo "$RESULT" | jq -r '.numero // empty')
-          NUMEROS=$(echo  "$RESULT" | jq -r '[.listaDezenas // [] | .[]] | join(" - ")')
+          NUMEROS=$(echo  "$RESULT" | jq -r '.listaDezenas // [] | join(" - ")')
           DATA=$(echo     "$RESULT" | jq -r '.dataApuracao // empty')
+          QTD=$(echo      "$RESULT" | jq -r '.listaDezenas // [] | length')
 
-          if [ -z "$CONCURSO" ]; then
-            echo "Resultado inválido. Saindo."
+          if [ -z "$CONCURSO" ] || [ "$QTD" -lt 15 ]; then
+            echo "⚠️  Resultado inválido ou incompleto ($QTD números). Caixa ainda não publicou."
             echo "numero=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          echo "Resultado encontrado: Concurso $CONCURSO ($DATA) - $NUMEROS"
-          echo "numero=$CONCURSO"  >> "$GITHUB_OUTPUT"
-          echo "numeros=$NUMEROS"  >> "$GITHUB_OUTPUT"
-          echo "data=$DATA"        >> "$GITHUB_OUTPUT"
+          echo "✅ Concurso $CONCURSO ($DATA): $NUMEROS"
+          printf 'numero=%s\n'  "$CONCURSO" >> "$GITHUB_OUTPUT"
+          printf 'numeros=%s\n' "$NUMEROS"  >> "$GITHUB_OUTPUT"
+          printf 'data=%s\n'    "$DATA"     >> "$GITHUB_OUTPUT"
 
+      # ═══════════════════════════════════════════════════════════════════════
+      # PASSO 3 — VERIFICAR SE ESTE CONCURSO JÁ FOI NOTIFICADO (evita dupla)
+      # ═══════════════════════════════════════════════════════════════════════
       - name: Verificar se este concurso já foi notificado
         if: steps.resultado.outputs.numero != ''
         id: cache
@@ -101,7 +141,11 @@ jobs:
           key: lotofacil-notificado-${{ steps.resultado.outputs.numero }}
           lookup-only: true
 
-      - name: Enviar notificação de resultado novo
+      # ═══════════════════════════════════════════════════════════════════════
+      # PASSO 4 — ENVIAR PUSH COM O RESULTADO (todos os assinantes)
+      # Inclui os números sorteados e o link para conferir os jogos
+      # ═══════════════════════════════════════════════════════════════════════
+      - name: Enviar push com resultado novo
         if: |
           steps.resultado.outputs.numero != '' &&
           steps.cache.outputs.cache-hit != 'true'
@@ -110,30 +154,42 @@ jobs:
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
           APP_URL: ${{ vars.APP_URL }}
         run: |
+          if [ -z "$ONESIGNAL_APP_ID" ] || [ "$ONESIGNAL_APP_ID" = "SEU_ONESIGNAL_APP_ID_AQUI" ]; then
+            echo "⚠️  ONESIGNAL_APP_ID não configurado. Configure o Secret no GitHub."
+            exit 0
+          fi
+
           CONCURSO="${{ steps.resultado.outputs.numero }}"
           NUMEROS="${{ steps.resultado.outputs.numeros }}"
           DATA="${{ steps.resultado.outputs.data }}"
 
-          echo "Notificando resultado do concurso $CONCURSO..."
-          curl -sf -X POST "https://onesignal.com/api/v1/notifications" \
+          echo "📣 Notificando resultado do concurso $CONCURSO..."
+          HTTP=$(curl -s -o /tmp/os_resp.json -w "%{http_code}" \
+            -X POST "https://onesignal.com/api/v1/notifications" \
             -H "Content-Type: application/json; charset=utf-8" \
             -H "Authorization: Basic $ONESIGNAL_API_KEY" \
             -d "{
               \"app_id\": \"$ONESIGNAL_APP_ID\",
               \"included_segments\": [\"Subscribed Users\"],
-              \"headings\": {\"pt\": \"🍀 Resultado Lotofácil!\"},
-              \"contents\": {\"pt\": \"Concurso ${CONCURSO} • ${DATA}\\n🎲 ${NUMEROS}\\n👆 Toque para ver seus acertos!\"},
-              \"url\": \"${APP_URL}\",
-              \"chrome_web_icon\": \"${APP_URL}logo.svg\",
+              \"headings\": {\"pt\": \"🍀 Resultado Lotofácil — Concurso ${CONCURSO}!\"},
+              \"contents\": {\"pt\": \"📅 ${DATA}\\n🎲 ${NUMEROS}\\n\\n👆 Toque para ver seus acertos!\"},
+              \"url\": \"${APP_URL}?autoVerificar=1\",
+              \"chrome_web_icon\": \"${APP_URL}logo-header.png\",
+              \"firefox_icon\":    \"${APP_URL}logo-header.png\",
+              \"small_icon\":      \"logo-header\",
               \"priority\": 10,
-              \"android_visibility\": 1
-            }" \
-            && echo "Notificação enviada!" \
-            || echo "Aviso: falha ao enviar notificação."
+              \"android_visibility\": 1,
+              \"ttl\": 86400
+            }")
+          echo "HTTP $HTTP — $(cat /tmp/os_resp.json)"
+          [ "$HTTP" = "200" ] && echo "✅ Push de resultado enviado!" || echo "⚠️  Falha (HTTP $HTTP)"
 
           mkdir -p .notification-cache
           echo "$CONCURSO" > .notification-cache/last-notificado
 
+      # ═══════════════════════════════════════════════════════════════════════
+      # PASSO 5 — SALVAR CACHE para não notificar o mesmo concurso duas vezes
+      # ═══════════════════════════════════════════════════════════════════════
       - name: Salvar cache (evitar re-notificação)
         if: |
           steps.resultado.outputs.numero != '' &&

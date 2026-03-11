@@ -1929,9 +1929,9 @@ const CelebracaoManager = {
 // ============================================
 
 // Horários diários agendados (no fuso de Brasília)
-const HORARIOS_NOTIFICACAO = ['10:00', '13:20', '15:00'];
+const HORARIOS_NOTIFICACAO = ['10:00', '13:20', '15:00', '21:30'];
 // Minutos desde meia-noite para cada horário (usado na comparação por janela)
-const HORARIOS_MINUTOS = { '10:00': 600, '13:20': 800, '15:00': 900 };
+const HORARIOS_MINUTOS = { '10:00': 600, '13:20': 800, '15:00': 900, '21:30': 1290 };
 
 const NotificacaoManager = {
 
@@ -2072,6 +2072,13 @@ const NotificacaoManager = {
 
     // Dispara notificação via SW, com fallback para new Notification()
     async _mostrarNotificacao(titulo, opcoes) {
+        // 🔔 Toca o som de notificacao sempre que o app estiver aberto/visivel
+        try {
+            const audio = new Audio('./dinheiro2.mp3');
+            audio.volume = 1.0;
+            await audio.play();
+        } catch (_) { /* bloqueado pelo navegador ou documento não interagido ainda */ }
+
         // Tenta via Service Worker (necessário em Android/PWA)
         try {
             const reg = await this._swReady();
@@ -2217,12 +2224,12 @@ const NotificacaoManager = {
 
         await this._mostrarNotificacao(titulo, {
             body: corpo,
-            icon: './logo.svg',
-            badge: './logo.svg',
+            icon: './logo-header.png',
+            badge: './logo-header.png',
             tag: 'lotofacil-resultado',
             requireInteraction,
             vibrate: vibrar,
-            data: { url: './' },
+            data: { url: './?autoVerificar=1' },
             actions: [
                 { action: 'view', title: acaoBtn },
                 { action: 'close', title: '✖ Fechar' }
@@ -2232,7 +2239,7 @@ const NotificacaoManager = {
 
     // ─────────────────────────────────────────────
     // Verifica se já passou a hora agendada hoje e ainda não foi notificado.
-    // Usa janela de 59 min — não perde o horário se o celular estava travado.
+    // Às 21:30 tenta buscar o resultado novo diretamente.
     // ─────────────────────────────────────────────
     async verificarHorarioAgendado() {
         if (Notification.permission !== 'granted') return;
@@ -2257,6 +2264,14 @@ const NotificacaoManager = {
             const chave = `notif_horario_${horario.replace(':', '_')}`;
             if (localStorage.getItem(chave) === hojeStr) continue; // já notificou hoje
 
+            // Às 21:30: tenta buscar resultado novo (sorteio acabou de acontecer)
+            if (horario === '21:30') {
+                localStorage.setItem(chave, hojeStr);
+                console.log('[Notificações] 21:30h — buscando resultado do sorteio...');
+                await this._verificarENotificarResultado21h30();
+                continue;
+            }
+
             localStorage.setItem(chave, hojeStr);
 
             const total = this.obterTotalAcumulado();
@@ -2266,11 +2281,11 @@ const NotificacaoManager = {
 
             await this._mostrarNotificacao('🦁 Milionários da Leograf', {
                 body: `⏰ ${horario}h — ${corpo}`,
-                icon: './logo.svg',
-                badge: './logo.svg',
+                icon: './logo-header.png',
+                badge: './logo-header.png',
                 tag: `horario-${horario.replace(':', '_')}`,
                 vibrate: [100, 50, 100],
-                data: { url: './' },
+                data: { url: './?autoVerificar=1' },
                 actions: [
                     { action: 'view', title: '🔍 Ver no App' },
                     { action: 'close', title: '✖ Fechar' }
@@ -2278,6 +2293,72 @@ const NotificacaoManager = {
             });
             console.log(`[Notificações] Notificação de ${horario}h enviada.`);
         }
+    },
+
+    // Tenta buscar resultado das 21:30 com retentativas (API pode demorar)
+    async _verificarENotificarResultado21h30() {
+        const MAX_TENTATIVAS = 5;
+        const INTERVALO_MS = 5 * 60 * 1000; // 5 minutos entre tentativas
+
+        for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+            try {
+                console.log(`[Notificações] Tentativa ${tentativa}/${MAX_TENTATIVAS} de buscar resultado das 21:30...`);
+                const resp = await fetch(
+                    'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil',
+                    { cache: 'no-store' }
+                );
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                if (!data.numero || !data.listaDezenas || data.listaDezenas.length === 0) throw new Error('Sem dados');
+
+                const ultimoNotificado = parseInt(localStorage.getItem('ultimoConcursoNotificado') || '0');
+                const numeros = data.listaDezenas.join(' - ');
+                const totalAcumulado = this.obterTotalAcumulado();
+                const linhaTotal = totalAcumulado > 0 ? `\n💰 Total acumulado: ${this.formatarMoeda(totalAcumulado)}` : '';
+
+                if (data.numero > ultimoNotificado) {
+                    localStorage.setItem('ultimoConcursoNotificado', String(data.numero));
+                    await this._mostrarNotificacao('🍀 Resultado de Hoje — Lotofácil!', {
+                        body: `Concurso ${data.numero} • ${data.dataApuracao || ''}\n🎲 ${numeros}${linhaTotal}\n\n👆 Toque para ver seus jogos conferidos!`,
+                        icon: './logo-header.png',
+                        badge: './logo-header.png',
+                        tag: 'lotofacil-resultado',
+                        requireInteraction: true,
+                        vibrate: [300, 100, 300, 100, 300],
+                        data: { url: './?autoVerificar=1' },
+                        actions: [
+                            { action: 'view', title: '🎯 Ver Resultados' },
+                            { action: 'close', title: '✖ Fechar' }
+                        ]
+                    });
+                    console.log(`[Notificações] Resultado das 21:30 notificado: Concurso ${data.numero}`);
+                } else {
+                    console.log(`[Notificações] Concurso ${data.numero} já foi notificado antes.`);
+                }
+                return; // sucesso — para as tentativas
+            } catch (err) {
+                console.warn(`[Notificações] Tentativa ${tentativa} falhou:`, err.message);
+                if (tentativa < MAX_TENTATIVAS) {
+                    await new Promise(resolve => setTimeout(resolve, INTERVALO_MS));
+                }
+            }
+        }
+        // Após todas as tentativas sem resultado, avisa para verificar manualmente
+        const total = this.obterTotalAcumulado();
+        const linhaTotal = total > 0 ? `\n💰 Total acumulado: ${this.formatarMoeda(total)}` : '';
+        await this._mostrarNotificacao('🦁 Resultado ainda não disponível', {
+            body: `O resultado de hoje ainda não foi publicado pela Caixa.\nAbra o app para verificar manualmente.${linhaTotal}`,
+            icon: './logo-header.png',
+            badge: './logo-header.png',
+            tag: 'lotofacil-resultado',
+            requireInteraction: false,
+            vibrate: [100, 50, 100],
+            data: { url: './?autoVerificar=1' },
+            actions: [
+                { action: 'view', title: '🔍 Verificar Agora' },
+                { action: 'close', title: '✖ Fechar' }
+            ]
+        });
     },
 
     // Inicia setInterval de 30s + dispara ao retomar visibilidade (desbloquear tela)
@@ -2291,7 +2372,7 @@ const NotificacaoManager = {
                 this.verificarHorarioAgendado();
             }
         });
-        console.log('[Notificações] Agendamento diário ativo: 10:00 • 12:45 • 15:00');
+        console.log('[Notificações] Agendamento diário ativo: 10:00 • 13:20 • 15:00 • 21:30');
     },
 
     // Verifica API ao abrir o app: se saiu resultado novo, notifica
@@ -2317,12 +2398,12 @@ const NotificacaoManager = {
                 }
                 await this._mostrarNotificacao('🍀 Novo Resultado Lotofácil!', {
                     body: corpoMsg,
-                    icon: './logo.svg',
-                    badge: './logo.svg',
+                    icon: './logo-header.png',
+                    badge: './logo-header.png',
                     tag: 'lotofacil-resultado',
                     requireInteraction: true,
                     vibrate: [200, 100, 200],
-                    data: { url: './' },
+                    data: { url: './?autoVerificar=1' },
                     actions: [
                         { action: 'view', title: '👁️ Ver Resultado' },
                         { action: 'close', title: '✖ Fechar' }
@@ -2422,4 +2503,32 @@ document.addEventListener('DOMContentLoaded', () => {
     ) {
         NotificacaoManager.checarNovoResultado();
     }
+
+    // Ao abrir o app via clique na notificação (?autoVerificar=1), disparar busca automática
+    if (new URLSearchParams(window.location.search).get('autoVerificar') === '1') {
+        console.log('[App] Aberto via notificação — iniciando verificação automática...');
+        setTimeout(() => {
+            const btn = document.getElementById('btnBuscarResultado');
+            if (btn && !btn.disabled) {
+                btn.click();
+                btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 1500); // Aguarda o app carregar completamente
+    }
 });
+
+// Listener de mensagem do Service Worker (notificationclick → autoVerificar)
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'BUSCAR_RESULTADO') {
+            console.log('[App] Mensagem do SW: iniciar busca de resultado');
+            // Toca o som quando o app é aberto/focado via clique na notificação
+            try { new Audio('./dinheiro2.mp3').play(); } catch (_) {}
+            const btn = document.getElementById('btnBuscarResultado');
+            if (btn && !btn.disabled) {
+                btn.click();
+                btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+}

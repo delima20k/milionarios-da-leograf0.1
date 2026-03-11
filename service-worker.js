@@ -1,9 +1,9 @@
 // Importa o Service Worker do OneSignal (push quando app está fechado)
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-const CACHE_NAME = 'milionarios-v6.1';
-const STATIC_CACHE = 'milionarios-static-v6.1';
-const DYNAMIC_CACHE = 'milionarios-dynamic-v6.1';
+const CACHE_NAME = 'milionarios-v6.2';
+const STATIC_CACHE = 'milionarios-static-v6.2';
+const DYNAMIC_CACHE = 'milionarios-dynamic-v6.2';
 
 // Recursos essenciais para cache
 const CORE_ASSETS = [
@@ -12,7 +12,8 @@ const CORE_ASSETS = [
   './style.css',
   './script.js',
   './manifest.json',
-  './logo.svg',
+  './logo-header.png',
+  './logo-splash.png',
   './dinheiro2.mp3'
 ];
 
@@ -211,13 +212,12 @@ async function verificarNovoResultadoSW() {
 
       await self.registration.showNotification('🍀 Novo Resultado Lotofácil!', {
         body: `Concurso ${data.numero} • ${dataApuracao}\n🎲 ${numeros}${totalTexto}`,
-        icon: './logo.svg',
-        badge: './logo.svg',
+        icon: './logo-header.png',
+        badge: './logo-header.png',
         tag: 'lotofacil-resultado',
-        sound: './dinheiro2.mp3',
         requireInteraction: true,
         vibrate: [200, 100, 200],
-        data: { url: './' },
+        data: { url: './?autoVerificar=1' },
         actions: [
           { action: 'view', title: '👁️ Ver Resultado' },
           { action: 'close', title: '✖ Fechar' }
@@ -254,7 +254,8 @@ async function verificarHorariosSW() {
     const HORARIOS = [
       { chave: '10_00', label: '10:00', minutos: 600 },
       { chave: '13_20', label: '13:20', minutos: 800 },
-      { chave: '15_00', label: '15:00', minutos: 900 }
+      { chave: '15_00', label: '15:00', minutos: 900 },
+      { chave: '21_30', label: '21:30', minutos: 1290, ehSorteio: true }
     ];
 
     const store = await caches.open('milionarios-notifications-v1');
@@ -271,18 +272,23 @@ async function verificarHorariosSW() {
         if (ultimaData !== dataBR) {
           await store.put(chaveCache, new Response(dataBR));
 
+          // Às 21:30 (horário do sorteio), tenta buscar o resultado diretamente
+          if (h.ehSorteio) {
+            await verificarNovoResultadoSW();
+            continue;
+          }
+
           const corpo = totalFormatado
             ? `💰 Total acumulado: ${totalFormatado}`
             : '📱 Abra o app para verificar os resultados!';
 
           await self.registration.showNotification('🦁 Milionários da Leograf', {
             body: `⏰ ${h.label}h — ${corpo}`,
-            icon: './logo.svg',
-            badge: './logo.svg',
+            icon: './logo-header.png',
+            badge: './logo-header.png',
             tag: `horario-${h.chave}`,
-            sound: './dinheiro2.mp3',
             vibrate: [100, 50, 100],
-            data: { url: './' },
+            data: { url: './?autoVerificar=1' },
             actions: [
               { action: 'view', title: '🔍 Ver no App' },
               { action: 'close', title: '✖ Fechar' }
@@ -298,5 +304,35 @@ async function verificarHorariosSW() {
 
 // Log de informações do SW
 console.log('[SW] Service Worker Milionários da Leograf carregado!');
+
+// ============================================
+// 🔔 CLIQUE NA NOTIFICAÇÃO — Abre o app e auto-verifica
+// ============================================
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  if (event.action === 'close') return;
+
+  const targetUrl = (event.notification.data && event.notification.data.url)
+    ? event.notification.data.url
+    : './?autoVerificar=1';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // Se o app já está aberto, foca e envia mensagem para disparar a busca
+      for (const client of windowClients) {
+        const clientUrl = new URL(client.url);
+        const swScope = new URL(self.registration.scope);
+        if (clientUrl.origin === swScope.origin && clientUrl.pathname.startsWith(swScope.pathname)) {
+          client.focus();
+          client.postMessage({ type: 'BUSCAR_RESULTADO' });
+          return;
+        }
+      }
+      // App fechado — abre uma nova aba com autoVerificar=1
+      return clients.openWindow(targetUrl);
+    })
+  );
+});
 console.log('[SW] Versão:', CACHE_NAME);
 console.log('[SW] Recursos principais:', CORE_ASSETS);
