@@ -2,9 +2,9 @@
 // registrem ANTES dos dele — garantindo que nosso notificationclick rode primeiro.
 // (Adicionado ao final do arquivo)
 
-const CACHE_NAME = 'milionarios-v6.5';
-const STATIC_CACHE = 'milionarios-static-v6.5';
-const DYNAMIC_CACHE = 'milionarios-dynamic-v6.5';
+const CACHE_NAME = 'milionarios-v6.6';
+const STATIC_CACHE = 'milionarios-static-v6.6';
+const DYNAMIC_CACHE = 'milionarios-dynamic-v6.6';
 
 // URL do app hardcodada — mais confiável que self.location em todos os contextos PWA
 const APP_BASE_URL = 'https://delima20k.github.io/milionarios-da-leograf0.1/';
@@ -314,8 +314,10 @@ console.log('[SW] Service Worker Milionários da Leograf carregado!');
 // ============================================
 self.addEventListener('notificationclick', event => {
   // Captura TODOS os cliques (nossas notif locais + push do OneSignal)
-  // OneSignal também registra listener, mas não funciona no PWA standalone;
-  // por isso controlamos aqui e usamos event.notification.data.url quando disponível.
+  // event.stopImmediatePropagation() impede que o listener do OneSignal
+  // (registrado depois, via importScripts ao final) também dispare e
+  // cause InvalidAccessError ao tentar abrir janela fora do contexto válido.
+  event.stopImmediatePropagation();
   event.notification.close();
 
   if (event.action === 'close') return;
