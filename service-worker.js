@@ -1,9 +1,9 @@
 // Importa o Service Worker do OneSignal (push quando app está fechado)
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-const CACHE_NAME = 'milionarios-v6.3';
-const STATIC_CACHE = 'milionarios-static-v6.3';
-const DYNAMIC_CACHE = 'milionarios-dynamic-v6.3';
+const CACHE_NAME = 'milionarios-v6.4';
+const STATIC_CACHE = 'milionarios-static-v6.4';
+const DYNAMIC_CACHE = 'milionarios-dynamic-v6.4';
 
 // URL base absoluta derivada do próprio arquivo SW — sempre correta no PWA instalado
 // Ex: https://delima20k.github.io/milionarios-da-leograf0.1/
@@ -313,35 +313,38 @@ console.log('[SW] Service Worker Milionários da Leograf carregado!');
 // 🔔 CLIQUE NA NOTIFICAÇÃO — Abre o app e auto-verifica
 // ============================================
 self.addEventListener('notificationclick', event => {
-  // Deixa o OneSignal tratar apenas as notificações dele (as que têm dados oneSignal)
-  // Para as nossas notificações locais (tag: lotofacil-resultado / horario-*), tratamos aqui
-  const tag = event.notification.tag || '';
-  const isNossaNotif = tag === 'lotofacil-resultado' || tag.startsWith('horario-');
-  if (!isNossaNotif) return; // deixa o OneSignal tratar as dele
-
+  // Captura TODOS os cliques (nossas notif locais + push do OneSignal)
+  // OneSignal também registra listener, mas não funciona no PWA standalone;
+  // por isso controlamos aqui e usamos event.notification.data.url quando disponível.
   event.notification.close();
+
   if (event.action === 'close') return;
 
-  // URL absoluta garantida: usa self.location do SW para derivar a base
-  const targetUrl = APP_BASE_URL + '?autoVerificar=1';
+  // URL vem do payload da notificação (push OneSignal) ou usa o padrão local
+  const notifData = event.notification.data;
+  const targetUrl = (notifData && notifData.url)
+    ? notifData.url
+    : APP_BASE_URL + '?autoVerificar=1';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async windowClients => {
-      // Procura aba/janela do app já aberta
+      // Procura janela/aba do PWA já aberta
       for (const client of windowClients) {
-        const clientUrl = new URL(client.url);
-        const baseUrl   = new URL(APP_BASE_URL);
-        if (clientUrl.origin === baseUrl.origin &&
-            clientUrl.pathname.startsWith(baseUrl.pathname)) {
-          // Navega para a URL com autoVerificar e foca
-          if ('navigate' in client) {
-            await client.navigate(targetUrl);
+        try {
+          const clientUrl = new URL(client.url);
+          const baseUrl   = new URL(APP_BASE_URL);
+          if (clientUrl.origin === baseUrl.origin &&
+              clientUrl.pathname.startsWith(baseUrl.pathname)) {
+            // Navega para a URL com autoVerificar e foca
+            if ('navigate' in client) {
+              await client.navigate(targetUrl);
+            }
+            await client.focus();
+            return;
           }
-          await client.focus();
-          return;
-        }
+        } catch (_) {}
       }
-      // App fechado — abre nova janela com URL absoluta dentro do escopo do PWA
+      // App fechado — abre nova janela
       return clients.openWindow(targetUrl);
     })
   );
