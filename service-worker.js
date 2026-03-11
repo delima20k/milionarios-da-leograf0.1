@@ -1,13 +1,13 @@
-// Importa o Service Worker do OneSignal (push quando app está fechado)
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+// ⚠️ importScripts do OneSignal fica ao FINAL para que nossos listeners
+// registrem ANTES dos dele — garantindo que nosso notificationclick rode primeiro.
+// (Adicionado ao final do arquivo)
 
-const CACHE_NAME = 'milionarios-v6.4';
-const STATIC_CACHE = 'milionarios-static-v6.4';
-const DYNAMIC_CACHE = 'milionarios-dynamic-v6.4';
+const CACHE_NAME = 'milionarios-v6.5';
+const STATIC_CACHE = 'milionarios-static-v6.5';
+const DYNAMIC_CACHE = 'milionarios-dynamic-v6.5';
 
-// URL base absoluta derivada do próprio arquivo SW — sempre correta no PWA instalado
-// Ex: https://delima20k.github.io/milionarios-da-leograf0.1/
-const APP_BASE_URL = self.location.href.replace(/service-worker\.js(\?.*)?$/, '');
+// URL do app hardcodada — mais confiável que self.location em todos os contextos PWA
+const APP_BASE_URL = 'https://delima20k.github.io/milionarios-da-leograf0.1/';
 
 // Recursos essenciais para cache
 const CORE_ASSETS = [
@@ -351,3 +351,7 @@ self.addEventListener('notificationclick', event => {
 });
 console.log('[SW] Versão:', CACHE_NAME);
 console.log('[SW] Recursos principais:', CORE_ASSETS);
+
+// OneSignal importado por último para que nossos listeners (install/activate/fetch/notificationclick)
+// já estejam registrados e tenham prioridade de execução
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
