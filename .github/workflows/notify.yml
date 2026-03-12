@@ -6,23 +6,17 @@ name: Notificações Milionários da Leograf
 #   para enviar push para todos os celulares com o app instalado,
 #   MESMO COM O APP FECHADO.
 #
-# PRÉ-REQUISITO — configure estes valores no repositório do GitHub:
-#   Settings → Secrets and variables → Actions
-#   ┌─ Secrets ────────────────────────────────────────────────────────────
-#   │  ONESIGNAL_APP_ID         → App ID do seu app no OneSignal
+# PRÉ-REQUISITO — configure APENAS UM secret no repositório do GitHub:
+#   Settings → Secrets and variables → Actions → New repository secret
+#   ┌─ Secret obrigatório ─────────────────────────────────────────────────
 #   │  ONESIGNAL_REST_API_KEY   → REST API Key do OneSignal
 #   └──────────────────────────────────────────────────────────────────────
-#   ┌─ Variables ──────────────────────────────────────────────────────────
-#   │  APP_URL  → URL do site com barra no final
-#   │             Ex: https://seuusuario.github.io/milionarios-da-leograf/
-#   └──────────────────────────────────────────────────────────────────────
+#   (App ID e URL do site já estão hardcoded abaixo — não precisam ser secrets)
 #
-# Como obter o App ID e REST API Key do OneSignal:
-#   1. Acesse https://onesignal.com e crie uma conta gratuita
-#   2. Crie um novo App → Web Push → selecione "Typical Site"
-#   3. Coloque a URL do seu GitHub Pages e siga os passos
-#   4. App Settings → Keys & IDs → copie "App ID" e "REST API Key"
-#   5. Também copie o "App ID" e cole no index.html onde diz SEU_ONESIGNAL_APP_ID_AQUI
+# Como obter a REST API Key do OneSignal:
+#   1. Acesse https://onesignal.com e faça login
+#   2. Selecione seu App → Settings → Keys & IDs
+#   3. Copie o campo "REST API Key" e adicione como secret ONESIGNAL_REST_API_KEY
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
@@ -55,13 +49,13 @@ jobs:
           github.event.schedule == '20 16 * * *' ||
           github.event.schedule == '0 18 * * *'
         env:
-          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_APP_ID: "9fc449ea-ce6f-462d-a3eb-1476569c151b"
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
-          APP_URL: ${{ vars.APP_URL }}
+          APP_URL: "https://delima20k.github.io/milionarios-da-leograf0.1/"
         run: |
-          if [ -z "$ONESIGNAL_APP_ID" ] || [ "$ONESIGNAL_APP_ID" = "SEU_ONESIGNAL_APP_ID_AQUI" ]; then
-            echo "⚠️  ONESIGNAL_APP_ID não configurado. Configure o Secret no GitHub."
-            exit 0
+          if [ -z "$ONESIGNAL_API_KEY" ]; then
+            echo "⚠️  ONESIGNAL_REST_API_KEY não configurado. Vá em Settings → Secrets no GitHub."
+            exit 1
           fi
 
           SCHEDULE="${{ github.event.schedule }}"
@@ -150,13 +144,13 @@ jobs:
           steps.resultado.outputs.numero != '' &&
           steps.cache.outputs.cache-hit != 'true'
         env:
-          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_APP_ID: "9fc449ea-ce6f-462d-a3eb-1476569c151b"
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
-          APP_URL: ${{ vars.APP_URL }}
+          APP_URL: "https://delima20k.github.io/milionarios-da-leograf0.1/"
         run: |
-          if [ -z "$ONESIGNAL_APP_ID" ] || [ "$ONESIGNAL_APP_ID" = "SEU_ONESIGNAL_APP_ID_AQUI" ]; then
-            echo "⚠️  ONESIGNAL_APP_ID não configurado. Configure o Secret no GitHub."
-            exit 0
+          if [ -z "$ONESIGNAL_API_KEY" ]; then
+            echo "⚠️  ONESIGNAL_REST_API_KEY não configurado. Vá em Settings → Secrets no GitHub."
+            exit 1
           fi
 
           CONCURSO="${{ steps.resultado.outputs.numero }}"
