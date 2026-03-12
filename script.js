@@ -203,30 +203,54 @@ let todosResultados = [];
 btnBuscarResultado.addEventListener('click', async () => {
     try {
         // Mostrar loading no botão
-        btnBuscarResultado.textContent = '⏳ Verificando do concurso 3619 até o atual...';
+        btnBuscarResultado.textContent = '⏳ Buscando concurso atual...';
         btnBuscarResultado.disabled = true;
 
         // Limpar resultados anteriores
         todosResultados = [];
 
+        // ─── 1. Descobrir o número real do concurso mais recente na API ───
+        let concursoMaisRecente = concursosTeimosinha[concursosTeimosinha.length - 1].concurso;
+        try {
+            const resLatest = await fetch(
+                'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil',
+                { cache: 'no-store' }
+            );
+            if (resLatest.ok) {
+                const dadosLatest = await resLatest.json();
+                if (dadosLatest.numero && dadosLatest.numero >= 3619) {
+                    concursoMaisRecente = dadosLatest.numero;
+                    console.log(`✅ Concurso mais recente detectado pela API: ${concursoMaisRecente}`);
+                }
+            }
+        } catch (e) {
+            console.log('⚠️ Não foi possível detectar concurso atual, usando estimativa:', concursoMaisRecente);
+        }
+
+        // ─── 2. Construir lista dinâmica de 3619 até o concurso atual real ───
+        const listaBusca = [];
+        for (let num = 3619; num <= concursoMaisRecente; num++) {
+            const meta = concursosTeimosinha.find(c => c.concurso === num);
+            listaBusca.push(meta || { concurso: num, data: '', dia: '' });
+        }
+
+        btnBuscarResultado.textContent = `⏳ Verificando ${listaBusca.length} concursos...`;
         console.log('🔍 Iniciando busca COMPLETA desde o concurso 3619...');
-        console.log(`📊 Total de concursos a verificar: ${concursosTeimosinha.length}`);
-        console.log(`📅 Período: ${concursosTeimosinha[0].data} (${concursosTeimosinha[0].concurso}) até ${concursosTeimosinha[concursosTeimosinha.length - 1].data} (${concursosTeimosinha[concursosTeimosinha.length - 1].concurso})`);
+        console.log(`📊 Total de concursos a verificar: ${listaBusca.length} (3619 até ${concursoMaisRecente})`);
 
-        let concursosEncontrados = 0;
-        let ultimoConcursoReal = null;
-        let errosConsecutivos = 0;
-
-        // Buscar todos os concursos desde o 3619
-        for (const concursoInfo of concursosTeimosinha) {
+        // ─── 3. Buscar cada concurso com cache desativado ───
+        for (const concursoInfo of listaBusca) {
             try {
-                console.log(`📊 Buscando concurso ${concursoInfo.concurso} (${concursoInfo.data} - ${concursoInfo.dia})`);
-                
-                const response = await fetch(`https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil/${concursoInfo.concurso}`);
-                
+                console.log(`📊 Buscando concurso ${concursoInfo.concurso}${concursoInfo.data ? ` (${concursoInfo.data} - ${concursoInfo.dia})` : ''}`);
+
+                const response = await fetch(
+                    `https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil/${concursoInfo.concurso}`,
+                    { cache: 'no-store' }
+                );
+
                 if (response.ok) {
                     const dados = await response.json();
-                    
+
                     // Verificar se tem números sorteados
                     if (dados.listaDezenas && dados.listaDezenas.length > 0) {
                         console.log(`✅ Concurso ${concursoInfo.concurso} encontrado e CONFERIDO!`);
@@ -236,42 +260,28 @@ btnBuscarResultado.addEventListener('click', async () => {
                             numerosSorteados: dados.listaDezenas.map(n => parseInt(n))
                         });
                         console.log(`📝 Números sorteados: ${dados.listaDezenas.join(', ')}`);
-                        concursosEncontrados++;
-                        ultimoConcursoReal = concursoInfo.concurso;
-                        errosConsecutivos = 0; // Reset contador de erros
                     } else {
-                        console.log(`⚠️ Concurso ${concursoInfo.concurso} sem números sorteados`);
-                        errosConsecutivos++;
+                        console.log(`⚠️ Concurso ${concursoInfo.concurso} sem números sorteados ainda`);
                     }
                 } else {
-                    console.log(`❌ Concurso ${concursoInfo.concurso} ainda não realizado (status: ${response.status})`);
-                    errosConsecutivos++;
-                    
-                    // Se já temos alguns resultados e encontramos 3 erros consecutivos, provavelmente chegamos no limite
-                    if (concursosEncontrados > 0 && errosConsecutivos >= 3) {
-                        console.log(`🛑 Parando busca após ${errosConsecutivos} erros consecutivos. Último concurso válido: ${ultimoConcursoReal}`);
-                        break;
-                    }
+                    console.log(`❌ Concurso ${concursoInfo.concurso} não disponível (status: ${response.status})`);
                 }
             } catch (error) {
                 console.log(`⚠️ Erro ao buscar concurso ${concursoInfo.concurso}:`, error.message);
-                errosConsecutivos++;
-                
-                // Se erro na API e já temos alguns resultados e muitos erros consecutivos, parar
-                if (concursosEncontrados > 0 && errosConsecutivos >= 5) {
-                    console.log(`🛑 Parando busca por muitos erros de API consecutivos (${errosConsecutivos})`);
-                    break;
-                }
             }
 
             // Pequeno delay para não sobrecarregar a API
             await new Promise(resolve => setTimeout(resolve, 150));
         }
 
+        const ultimoConcursoReal = todosResultados.length > 0
+            ? todosResultados[todosResultados.length - 1].concurso
+            : null;
+
         console.log(`📋 RESULTADO DA BUSCA:`);
         console.log(`   ✅ Concursos encontrados: ${todosResultados.length}`);
-        console.log(`   📊 Período verificado: Concurso 3619 até ${ultimoConcursoReal || 'atual'}`);
-        console.log(`   📅 Datas: ${todosResultados.length > 0 ? `${todosResultados[0].data} até ${todosResultados[todosResultados.length - 1].data}` : 'Nenhuma'}`);
+        console.log(`   📊 Período verificado: Concurso 3619 até ${ultimoConcursoReal || 'nenhum'}`);
+        console.log(`   📅 Datas: ${todosResultados.length > 0 ? `${todosResultados[0].data || '?'} até ${todosResultados[todosResultados.length - 1].data || '?'}` : 'Nenhuma'}`);
 
         if (todosResultados.length === 0) {
             // Se não encontrou resultados reais, usar dados simulados para teste
