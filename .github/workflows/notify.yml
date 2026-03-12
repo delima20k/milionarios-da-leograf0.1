@@ -27,8 +27,8 @@ on:
     - cron: '0 21 * * *'    # 18:00 BRT — lembrete noite
     # ── Resultado Lotofácil (sorteio ~20:00 BRT, segunda a sábado) ───────────
     - cron: '35 23 * * 1-6' # 20:35 BRT seg-sáb — 1ª tentativa (logo após sorteio)
-    - cron: '30 0 * * 2-7'  # 21:30 BRT seg-sáb — 2ª tentativa (resultado consolidado)
-    - cron: '0 1 * * 2-7'   # 22:00 BRT seg-sáb — 3ª tentativa (fallback)
+    - cron: '30 0 * * 0,2-6'  # 21:30 BRT seg-sáb — 2ª tentativa (resultado consolidado)
+    - cron: '0 1 * * 0,2-6'   # 22:00 BRT seg-sáb — 3ª tentativa (fallback)
   workflow_dispatch:          # Permite disparar manualmente pelo GitHub Actions
 
 permissions:
@@ -91,8 +91,8 @@ jobs:
       - name: Buscar resultado Lotofácil
         if: |
           github.event.schedule == '35 23 * * 1-6' ||
-          github.event.schedule == '30 0 * * 2-7'  ||
-          github.event.schedule == '0 1 * * 2-7'   ||
+          github.event.schedule == '30 0 * * 0,2-6'  ||
+          github.event.schedule == '0 1 * * 0,2-6'   ||
           github.event_name == 'workflow_dispatch'
         id: resultado
         run: |
