@@ -257,8 +257,8 @@ async function verificarHorariosSW() {
 
     const HORARIOS = [
       { chave: '10_00', label: '10:00', minutos: 600 },
-      { chave: '13_20', label: '13:20', minutos: 800 },
       { chave: '15_00', label: '15:00', minutos: 900 },
+      { chave: '18_00', label: '18:00', minutos: 1080 },
       { chave: '21_30', label: '21:30', minutos: 1290, ehSorteio: true }
     ];
 

@@ -23,8 +23,8 @@ on:
   schedule:
     # ── Lembretes diários (todos os dias) ──────── Horário de Brasília = UTC-3
     - cron: '0 13 * * *'    # 10:00 BRT — lembrete matinal
-    - cron: '20 16 * * *'   # 13:20 BRT — lembrete tarde
     - cron: '0 18 * * *'    # 15:00 BRT — lembrete tarde
+    - cron: '0 21 * * *'    # 18:00 BRT — lembrete noite
     # ── Resultado Lotofácil (sorteio ~20:00 BRT, segunda a sábado) ───────────
     - cron: '35 23 * * 1-6' # 20:35 BRT seg-sáb — 1ª tentativa (logo após sorteio)
     - cron: '30 0 * * 2-7'  # 21:30 BRT seg-sáb — 2ª tentativa (resultado consolidado)
@@ -40,14 +40,14 @@ jobs:
 
     steps:
       # ═══════════════════════════════════════════════════════════════════════
-      # PASSO 1 — LEMBRETE DE HORÁRIO (10:00 / 13:20 / 15:00 BRT)
+      # PASSO 1 — LEMBRETE DE HORÁRIO (10:00 / 15:00 / 18:00 BRT)
       # Notifica todos os assinantes para abrirem o app
       # ═══════════════════════════════════════════════════════════════════════
       - name: Notificação de horário agendado
         if: |
-          github.event.schedule == '0 13 * * *'  ||
-          github.event.schedule == '20 16 * * *' ||
-          github.event.schedule == '0 18 * * *'
+          github.event.schedule == '0 13 * * *' ||
+          github.event.schedule == '0 18 * * *' ||
+          github.event.schedule == '0 21 * * *'
         env:
           ONESIGNAL_APP_ID: "9fc449ea-ce6f-462d-a3eb-1476569c151b"
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
@@ -60,9 +60,9 @@ jobs:
 
           SCHEDULE="${{ github.event.schedule }}"
           case "$SCHEDULE" in
-            "0 13 * * *")  HORA="10:00" EMOJI="🌅" ;;
-            "20 16 * * *") HORA="13:20" EMOJI="☀️"  ;;
-            "0 18 * * *")  HORA="15:00" EMOJI="🌤️"  ;;
+            "0 13 * * *") HORA="10:00" EMOJI="🌅" ;;
+            "0 18 * * *") HORA="15:00" EMOJI="☀️"  ;;
+            "0 21 * * *") HORA="18:00" EMOJI="🌆"  ;;
             *) echo "Cron não reconhecido; saindo."; exit 0 ;;
           esac
 

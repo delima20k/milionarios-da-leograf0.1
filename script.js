@@ -1939,9 +1939,9 @@ const CelebracaoManager = {
 // ============================================
 
 // Horários diários agendados (no fuso de Brasília)
-const HORARIOS_NOTIFICACAO = ['10:00', '13:20', '15:00', '21:30'];
+const HORARIOS_NOTIFICACAO = ['10:00', '15:00', '18:00', '21:30'];
 // Minutos desde meia-noite para cada horário (usado na comparação por janela)
-const HORARIOS_MINUTOS = { '10:00': 600, '13:20': 800, '15:00': 900, '21:30': 1290 };
+const HORARIOS_MINUTOS = { '10:00': 600, '15:00': 900, '18:00': 1080, '21:30': 1290 };
 
 const NotificacaoManager = {
 
