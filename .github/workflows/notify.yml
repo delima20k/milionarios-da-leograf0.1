@@ -22,8 +22,7 @@ name: Notificacoes Milionarios da Leograf
 on:
   schedule:
     # ── Lembretes diários (todos os dias) ──────── Horário de Brasília = UTC-3
-    - cron: '0 13 * * *'    # 10:00 BRT — lembrete matinal
-    - cron: '0 18 * * *'    # 15:00 BRT — lembrete tarde
+    - cron: '0 13 * * *'    # 10:00 BRT — lembrete matinal    - cron: '50 14 * * *'   # 11:50 BRT — TESTE    - cron: '0 18 * * *'    # 15:00 BRT — lembrete tarde
     - cron: '0 21 * * *'    # 18:00 BRT — lembrete noite
     # ── Resultado Lotofácil (sorteio ~20:00 BRT, segunda a sábado) ───────────
     - cron: '35 23 * * 1-6' # 20:35 BRT seg-sáb — 1ª tentativa (logo após sorteio)
@@ -48,6 +47,7 @@ jobs:
       - name: Notificação de horário agendado
         if: |
           github.event.schedule == '0 13 * * *' ||
+          github.event.schedule == '50 14 * * *' ||
           github.event.schedule == '0 18 * * *' ||
           github.event.schedule == '0 21 * * *'
         env:
@@ -62,9 +62,10 @@ jobs:
 
           SCHEDULE="${{ github.event.schedule }}"
           case "$SCHEDULE" in
-            "0 13 * * *") HORA="10:00" EMOJI="🌅" ;;
-            "0 18 * * *") HORA="15:00" EMOJI="☀️"  ;;
-            "0 21 * * *") HORA="18:00" EMOJI="🌆"  ;;
+            "0 13 * * *")  HORA="10:00" EMOJI="🌅" ;;
+            "50 14 * * *") HORA="11:50" EMOJI="🧪" ;;
+            "0 18 * * *")  HORA="15:00" EMOJI="☀️"  ;;
+            "0 21 * * *")  HORA="18:00" EMOJI="🌆"  ;;
             *) echo "Cron não reconhecido; saindo."; exit 0 ;;
           esac
 
