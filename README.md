@@ -4,7 +4,8 @@ Progressive Web App para verificação automática dos jogos da Lotofácil do bo
 
 ## 🌟 Funcionalidades
 
-- ✅ **Verificação Automática**: Todos os concursos desde o 3525 (29/10/2025)
+- ✅ **Verificação Automática**: Todos os concursos desde o 3589 (13/01/2026)
+- ✅ **Teimosinha 23x**: 18 jogos por 23 sorteios
 - ✅ **Detecção Inteligente**: Encontra jogos com 11, 12, 13, 14 ou 15 pontos
 - ✅ **Cálculo de Prêmios**: Valores reais da API da Caixa
 - ✅ **Interface Responsiva**: Funciona perfeitamente em mobile e desktop
@@ -15,8 +16,8 @@ Progressive Web App para verificação automática dos jogos da Lotofácil do bo
 ## 🎯 Como Funciona
 
 1. **Clique em "Verificar Todos os Concursos"**
-2. **Sistema busca automaticamente**: Do concurso 3525 até o mais atual
-3. **Análise completa**: Verifica os 10 jogos do bolão em cada sorteio
+2. **Sistema busca automaticamente**: Do concurso 3589 até o mais atual
+3. **Análise completa**: Verifica os 18 jogos do bolão em cada sorteio
 4. **Relatório detalhado**: Mostra acertos, prêmios e totais acumulados
 
 ## 📱 Instalação
@@ -57,18 +58,26 @@ testar-local.bat
 
 ## 🎲 Jogos do Bolão
 
-O sistema verifica automaticamente estes 10 jogos:
+O sistema verifica automaticamente estes **18 jogos** (Teimosinha 23x a partir de 13/01/2026):
 
-1. `[02,03,06,09,10,12,13,16,17,18,19,21,23,24,25]`
-2. `[01,02,05,07,11,12,13,16,17,18,19,20,21,22,23]`
-3. `[02,03,06,08,12,13,14,16,17,18,19,20,21,22,23]`
-4. `[03,04,07,09,13,14,15,16,17,18,19,20,21,22,24]`
-5. `[01,04,05,07,08,14,16,17,18,19,20,22,23,24,25]`
-6. `[02,05,06,07,08,10,11,12,13,14,16,17,18,19,21]`
-7. `[03,06,07,08,11,12,13,14,17,19,20,21,22,23,24]`
-8. `[02,04,05,06,08,09,11,12,13,14,19,20,21,22,23]`
-9. `[01,03,07,08,09,12,13,14,15,17,18,19,23,24,25]`
-10. `[05,06,07,09,10,12,13,14,16,17,19,20,21,22,24]`
+1. `[01,02,03,04,05,06,07,09,11,13,15,17,18,19,20]`
+2. `[01,02,03,05,07,08,09,10,11,13,15,17,18,19,21]`
+3. `[01,02,03,04,05,06,07,09,11,12,13,16,17,20,21]`
+4. `[01,03,04,05,07,08,09,10,13,14,15,17,18,19,21]`
+5. `[01,02,03,05,07,08,09,10,13,14,15,17,19,20,21]`
+6. `[01,02,03,04,05,06,07,09,13,15,16,17,18,19,21]`
+7. `[01,02,03,05,07,08,09,11,13,14,15,17,18,19,21]`
+8. `[01,03,04,05,06,07,09,10,11,13,15,17,19,20,21]`
+9. `[01,02,03,05,07,09,11,12,13,15,16,17,18,19,20]`
+10. `[01,02,03,04,05,06,07,09,11,13,14,15,17,18,21]`
+11. `[02,03,04,05,06,07,09,11,13,15,17,18,19,20,21]`
+12. `[02,03,05,07,08,09,10,11,13,15,17,18,19,20,21]`
+13. `[02,03,04,05,06,07,09,11,12,13,15,17,18,20,21]`
+14. `[02,03,05,07,08,09,10,11,13,14,15,17,18,19,20]`
+15. `[02,03,05,07,08,09,10,11,12,13,15,17,18,20,21]`
+16. `[02,03,04,05,06,07,09,11,13,15,16,17,18,19,20]`
+17. `[02,03,05,07,08,09,11,13,14,15,17,18,19,20,21]`
+18. `[02,03,04,05,06,07,09,10,11,13,15,17,19,20,21]`
 
 ## 📊 Premiação
 
@@ -100,8 +109,9 @@ O sistema calcula automaticamente:
 
 **"Milionários da Leograf"** - Grupo de apostadores unidos pela sorte!
 
-- 🗓️ **Início da Teimosinha**: 29/10/2025 (Concurso 3525)
-- 🎯 **10 jogos por concurso**: Sempre os mesmos números
+- 🗓️ **Início da Teimosinha**: 13/01/2026 (Concurso 3589)
+- 🎲 **Teimosinha**: 23 sorteios
+- 🎯 **18 jogos por concurso**: Sempre os mesmos números
 - 📱 **Verificação automática**: Nunca mais perca um prêmio
 - 💰 **Transparência total**: Todos os valores são oficiais
 
