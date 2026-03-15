@@ -123,6 +123,159 @@ menuItems.forEach(item => {
 });
 
 // ============================================
+// 📲 INSTALAR PWA - BOTÃO NO HEADER
+// ============================================
+(function() {
+    let deferredPrompt = null;
+    const btnInstalar = document.getElementById('btnInstalarPWA');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (btnInstalar) {
+            btnInstalar.style.display = 'inline-flex';
+            btnInstalar.style.alignItems = 'center';
+            btnInstalar.style.gap = '6px';
+        }
+    });
+
+    if (btnInstalar) {
+        btnInstalar.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`📲 Instalação: ${outcome}`);
+            deferredPrompt = null;
+            btnInstalar.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('appinstalled', () => {
+        if (btnInstalar) btnInstalar.style.display = 'none';
+        deferredPrompt = null;
+        console.log('✅ PWA instalado com sucesso!');
+    });
+})();
+
+// ============================================
+// 🎉 MODAL PARABÉNS + CONFETTI
+// ============================================
+const ModalParabens = (function() {
+    let confettiInterval = null;
+    const particles = [];
+
+    const CORES = ['#f1c40f','#2ecc71','#e74c3c','#3498db','#9b59b6','#e67e22','#1abc9c','#fff'];
+
+    function criarParticula(canvas) {
+        return {
+            x: Math.random() * canvas.width,
+            y: -10,
+            r: Math.random() * 8 + 4,
+            cor: CORES[Math.floor(Math.random() * CORES.length)],
+            speed: Math.random() * 4 + 2,
+            angle: Math.random() * Math.PI * 2,
+            spin: (Math.random() - 0.5) * 0.2,
+            drift: (Math.random() - 0.5) * 2,
+            forma: Math.random() > 0.5 ? 'rect' : 'circle'
+        };
+    }
+
+    function iniciarConfetti() {
+        const canvas = document.getElementById('confettiCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        particles.length = 0;
+
+        let tick = 0;
+        if (confettiInterval) cancelAnimationFrame(confettiInterval);
+
+        function frame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            tick++;
+            if (tick % 3 === 0 && particles.length < 200) {
+                for (let i = 0; i < 5; i++) particles.push(criarParticula(canvas));
+            }
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.y += p.speed;
+                p.x += p.drift;
+                p.angle += p.spin;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
+                ctx.fillStyle = p.cor;
+                ctx.globalAlpha = 0.9;
+                if (p.forma === 'rect') {
+                    ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.r / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+                if (p.y > canvas.height + 20) particles.splice(i, 1);
+            }
+            if (document.getElementById('modalParabens') && document.getElementById('modalParabens').style.display !== 'none') {
+                confettiInterval = requestAnimationFrame(frame);
+            }
+        }
+        confettiInterval = requestAnimationFrame(frame);
+    }
+
+    function pararConfetti() {
+        if (confettiInterval) {
+            cancelAnimationFrame(confettiInterval);
+            confettiInterval = null;
+        }
+        const canvas = document.getElementById('confettiCanvas');
+        if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        particles.length = 0;
+    }
+
+    function mostrar(jogosPremiados, numeroConcurso) {
+        const modal = document.getElementById('modalParabens');
+        const sub = document.getElementById('modalParabensSub');
+        const jogosDiv = document.getElementById('modalParabensJogos');
+        if (!modal) return;
+
+        const maxPontos = Math.max(...jogosPremiados.map(j => j.totalAcertos));
+        const emojis = { 15: '👑🌟', 14: '🏅✨', 13: '🎯⭐' };
+        const estrelas = maxPontos >= 15 ? '🌟🌟🌟🌟🌟' : maxPontos === 14 ? '🌟🌟🌟🌟' : '🌟🌟🌟';
+
+        sub.textContent = `Concurso ${numeroConcurso} — ${jogosPremiados.length} jogo(s) com 13+ pontos! ${estrelas}`;
+
+        jogosDiv.innerHTML = jogosPremiados.map(j => `
+            <div class="modal-jogo-premiado">
+                <div class="mjp-info">Jogo ${j.numeroJogo}</div>
+                <div class="mjp-pontos">${j.totalAcertos} pts</div>
+                <div class="mjp-estrelas">${emojis[j.totalAcertos] || '⭐'}</div>
+            </div>
+        `).join('');
+
+        modal.style.display = 'flex';
+        iniciarConfetti();
+
+        const fechar = document.getElementById('modalParabensFechar');
+        if (fechar) {
+            fechar.onclick = () => {
+                modal.style.display = 'none';
+                pararConfetti();
+            };
+        }
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                pararConfetti();
+            }
+        };
+    }
+
+    return { mostrar };
+})();
+
+// ============================================
 // BUSCAR RESULTADO DA LOTOFÁCIL
 // ============================================
 
@@ -412,6 +565,7 @@ function verificarTodosJogos(resultados) {
         
         let totalConcurso = 0;
         let temJogoComPremio = false;
+        const jogos13maisBulk = []; // 🎉 Rastrear jogos com 13+
         
         // Verificar cada jogo neste concurso
         jogos.forEach((jogo, indexJogo) => {
@@ -420,6 +574,11 @@ function verificarTodosJogos(resultados) {
             
             console.log(`🎲 Jogo ${indexJogo + 1}: [${jogo.join(', ')}]`);
             console.log(`   ✅ Acertos: [${acertos.join(', ')}] = ${totalAcertos} pontos`);
+            
+            // 🎉 Registrar jogos com 13+ pontos para modal
+            if (totalAcertos >= 13) {
+                jogos13maisBulk.push({ numeroJogo: indexJogo + 1, totalAcertos });
+            }
             
             let valorPremioJogo = 0;
             
@@ -497,6 +656,13 @@ function verificarTodosJogos(resultados) {
                 concursoSection.appendChild(jogoCard);
             }
         });
+
+        // 🎉 Mostrar modal de parabéns se há jogos com 13+ pontos
+        if (jogos13maisBulk.length > 0) {
+            const concursoNum = resultado.concurso;
+            const delay = indexConcurso * 200; // escalonar modais se houver vários concursos
+            setTimeout(() => ModalParabens.mostrar(jogos13maisBulk, concursoNum), 800 + delay);
+        }
         
         // Total deste concurso
         if (totalConcurso > 0) {
@@ -926,6 +1092,7 @@ async function verificarConcursoTeimosinha(teimosinha) {
         
         // Mostrar resultado
         mostrarResultadoConcursoIndividual(resultadoCompleto);
+        verificarEMostrarModalParabens(resultadoCompleto);
         
         console.log(`✅ Verificação concluída para ${teimosinha.numero}ª teimosinha`);
         
@@ -951,6 +1118,7 @@ async function verificarConcursoTeimosinha(teimosinha) {
             
             // Mostrar resultado
             mostrarResultadoConcursoIndividual(resultadoCompleto);
+            verificarEMostrarModalParabens(resultadoCompleto);
         } else {
             // Restaurar texto original
             if (botaoElement) {
@@ -1010,6 +1178,16 @@ async function verificarJogosDoConursoTeimosinha(concursoResultado) {
         totalConcurso: totalConcurso,
         temPremio: totalConcurso > 0
     };
+}
+
+// 🎉 Verificar se há jogos com 13+ pontos e mostrar modal
+function verificarEMostrarModalParabens(resultadoCompleto) {
+    const jogos13mais = resultadoCompleto.jogosResultado.filter(j => j.totalAcertos >= 13);
+    if (jogos13mais.length > 0) {
+        setTimeout(() => {
+            ModalParabens.mostrar(jogos13mais, resultadoCompleto.concurso);
+        }, 600);
+    }
 }
 
 // Atualizar visual do botão

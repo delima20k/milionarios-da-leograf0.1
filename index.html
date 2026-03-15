@@ -109,17 +109,20 @@
 
     <header class="header">
         <div class="header-content">
-            <!-- 🦁 Logo do Header -->
-            <img src="logo-header.png" alt="Milionários da Leograf" class="leao-css" title="Milionários da Leograf" style="width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(46,204,113,0.5));">
-            
             <!-- Título -->
             <h1 class="header-title">Milionários da Leograf</h1>
             
-            <!-- Menu Hambúrguer -->
-            <div class="hamburger-menu" id="hamburger">
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
+            <div class="header-actions">
+                <!-- Botão Instalar PWA -->
+                <button id="btnInstalarPWA" class="btn-instalar-pwa" style="display:none;" title="Instalar o App">
+                    📲 Instalar App
+                </button>
+                <!-- Menu Hambúrguer -->
+                <div class="hamburger-menu" id="hamburger">
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                    <div class="bar"></div>
+                </div>
             </div>
         </div>
         
@@ -132,7 +135,7 @@
                 <li class="menu-item">Black</li>
                 <li class="menu-item">Sidnei</li>
                 <li class="menu-item">Fabio</li>
-                <li class="menu-item">Gil</li>
+                <li class="menu-item">Gil </li>
                 <li class="menu-item">Kabelo com K</li>
                 <li class="menu-item">Claudia</li>
                 <li class="menu-item">Wanderson</li>
@@ -166,8 +169,8 @@
                 <h2 class="lottery-title">LOTOFÁCIL</h2>
             </div>
             
-            <h2 class="bolao-title">Bolão com 18 pessoas</h2>
-            <h3 class="valor-arrecadado">Valor Arrecadado R$ 1,512,00 Reais</h3>
+            <h2 class="bolao-title">Bolão com 20 pessoas</h2>
+            <h3 class="valor-arrecadado">Valor Arrecadado R$ 1,680,00 Reais</h3>
             
             <!-- Botão Buscar Resultado -->
             <div class="botao-container">
@@ -458,6 +461,20 @@
             </div>
         </div>
     </footer>
+
+    <!-- ============================================
+         🎉 MODAL PARABÉNS - 13+ PONTOS
+         ============================================ -->
+    <div id="modalParabens" class="modal-parabens" style="display:none;" role="dialog" aria-modal="true">
+        <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+        <div class="modal-parabens-box">
+            <div class="modal-parabens-trofeus">🏆🏆🏆</div>
+            <h2 class="modal-parabens-titulo">PARABÉNS! 🎉</h2>
+            <p class="modal-parabens-sub" id="modalParabensSub">Acertou os pontos!</p>
+            <div class="modal-parabens-jogos" id="modalParabensJogos"></div>
+            <button class="modal-parabens-fechar" id="modalParabensFechar">🎉 Fechar</button>
+        </div>
+    </div>
 
     <script src="script.js"></script>
     <script>

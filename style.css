@@ -1000,6 +1000,174 @@ body {
 }
 
 /* ========================================
+   📲 HEADER ACTIONS + BOTÃO INSTALAR PWA
+   ======================================== */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.btn-instalar-pwa {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 10px rgba(46,204,113,0.4);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    white-space: nowrap;
+}
+
+.btn-instalar-pwa:hover {
+    background: linear-gradient(135deg, #27ae60, #1e8449);
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(46,204,113,0.6);
+}
+
+.btn-instalar-pwa:active {
+    transform: scale(0.97);
+}
+
+/* ========================================
+   🎉 MODAL PARABÉNS + CONFETTI
+   ======================================== */
+.modal-parabens {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    animation: fadeInModal 0.35s ease;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.confetti-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 99998;
+}
+
+.modal-parabens-box {
+    position: relative;
+    z-index: 100000;
+    background: linear-gradient(145deg, #0f2027, #203a43, #1a472a);
+    border: 2px solid #2ecc71;
+    border-radius: 20px;
+    padding: 36px 28px 28px;
+    max-width: 480px;
+    width: 92%;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(46,204,113,0.5), 0 20px 60px rgba(0,0,0,0.6);
+    animation: popInModal 0.45s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes popInModal {
+    from { transform: scale(0.5) rotate(-6deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.modal-parabens-trofeus {
+    font-size: 42px;
+    letter-spacing: 6px;
+    margin-bottom: 10px;
+    animation: trofeuPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes trofeuPulse {
+    from { transform: scale(1); filter: drop-shadow(0 0 8px gold); }
+    to   { transform: scale(1.12); filter: drop-shadow(0 0 24px gold); }
+}
+
+.modal-parabens-titulo {
+    font-size: 34px;
+    font-weight: 900;
+    color: #f1c40f;
+    text-shadow: 0 0 20px rgba(241,196,15,0.7), 0 2px 4px rgba(0,0,0,0.5);
+    margin: 0 0 8px;
+    letter-spacing: 2px;
+}
+
+.modal-parabens-sub {
+    font-size: 16px;
+    color: #a9f0c4;
+    margin: 0 0 18px;
+    font-weight: 600;
+}
+
+.modal-parabens-jogos {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 22px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.modal-jogo-premiado {
+    background: rgba(46,204,113,0.12);
+    border: 1px solid rgba(46,204,113,0.4);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-jogo-premiado .mjp-info {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.modal-jogo-premiado .mjp-pontos {
+    font-size: 22px;
+    font-weight: 900;
+    color: #f1c40f;
+    text-shadow: 0 0 10px rgba(241,196,15,0.6);
+}
+
+.modal-jogo-premiado .mjp-estrelas {
+    font-size: 15px;
+    letter-spacing: 2px;
+}
+
+.modal-parabens-fechar {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: #fff;
+    border: none;
+    border-radius: 30px;
+    padding: 12px 36px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 20px rgba(46,204,113,0.5);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.modal-parabens-fechar:hover {
+    transform: scale(1.06);
+    box-shadow: 0 6px 28px rgba(46,204,113,0.7);
+}
+
+/* ========================================
    📋 MENU LATERAL - 18 PARTICIPANTES
    ======================================== */
 .side-menu {
