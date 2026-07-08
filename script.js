@@ -2,6 +2,28 @@
 // MENU HAMBÚRGUER
 // ============================================
 
+function removerModaisAntigasQuinaSaoJoao() {
+    const termos = ['quina', 'sao joao', 'são joão', 'joao', 'joão'];
+
+    document.querySelectorAll('[id*="modal" i], [class*="modal" i], dialog').forEach(elemento => {
+        const texto = (elemento.textContent || '').toLowerCase();
+        const deveRemover = texto.includes('quina') || termos.some(termo => texto.includes(termo));
+
+        if (deveRemover) {
+            elemento.remove();
+        }
+    });
+
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', removerModaisAntigasQuinaSaoJoao, { once: true });
+} else {
+    removerModaisAntigasQuinaSaoJoao();
+}
+
 // Elementos
 const hamburger = document.getElementById('hamburger');
 const sideMenu = document.getElementById('sideMenu');

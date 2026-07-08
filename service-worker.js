@@ -1,9 +1,9 @@
 // Service Worker — Milionários da Leograf
 // Web Push VAPID nativo (sem OneSignal)
 
-const CACHE_NAME = 'milionarios-v9.0';
-const STATIC_CACHE = 'milionarios-static-v9.0';
-const DYNAMIC_CACHE = 'milionarios-dynamic-v9.0';
+const CACHE_NAME = 'milionarios-v10.0';
+const STATIC_CACHE = 'milionarios-static-v10.0';
+const DYNAMIC_CACHE = 'milionarios-dynamic-v10.0';
 
 // URL do app hardcodada — mais confiável que self.location em todos os contextos PWA
 const APP_BASE_URL = 'https://delima20k.github.io/milionarios-da-leograf0.1/';
@@ -68,7 +68,7 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Interceptar requisições com estratégia Cache First para assets estáticos
+// Interceptar requisições com estratégia Network First para assets estáticos
 // e Network First para API calls
 self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
@@ -84,33 +84,22 @@ self.addEventListener('fetch', event => {
     requestUrl.pathname.endsWith('/' + f) || requestUrl.pathname === '/' + f
   );
 
-  // Estratégia para recursos estáticos (Cache First)
+  // Estratégia para recursos estáticos (Network First)
   if (isStaticAsset) {
     event.respondWith(
-      caches.match(event.request)
-        .then(cachedResponse => {
-          if (cachedResponse) {
-            // Revalida em background para próxima visita
-            fetch(event.request).then(freshResp => {
-              if (freshResp.ok) {
-                caches.open(STATIC_CACHE).then(c => c.put(event.request, freshResp));
-              }
-            }).catch(() => {});
-            return cachedResponse;
+      fetch(event.request, { cache: 'no-store' })
+        .then(response => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(STATIC_CACHE).then(cache => cache.put(event.request, responseClone));
           }
-          return fetch(event.request)
-            .then(response => {
-              if (response.ok) {
-                const responseClone = response.clone();
-                caches.open(STATIC_CACHE).then(cache => cache.put(event.request, responseClone));
-              }
-              return response;
-            });
+          return response;
         })
         .catch(() => {
           if (event.request.destination === 'document') {
             return caches.match('./index.html');
           }
+          return caches.match(event.request);
         })
     );
   }
