@@ -1,0 +1,19 @@
+{
+  "name": "milionarios-push-server",
+  "version": "1.0.0",
+  "description": "Servidor de push notifications — Milionários da Leograf (web-push npm)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "send": "node check-and-send.js",
+    "keys": "node generate-keys.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "web-push": "^3.6.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

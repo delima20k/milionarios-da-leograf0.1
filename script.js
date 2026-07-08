@@ -27,45 +27,6 @@
 })();
 
 // ============================================
-// 🎮 MENSAGEM DE BOAS-VINDAS (3 SEGUNDOS)
-// ============================================
-(function() {
-    const welcomeTooltip = document.getElementById('welcomeTooltip');
-    const welcomeClose = document.getElementById('welcomeClose');
-    const btnPaciencia = document.getElementById('btnPaciencia');
-    
-    // Verifica se já foi fechada hoje
-    const hoje = new Date().toDateString();
-    const ultimoFechamento = localStorage.getItem('welcomeTooltipFechado');
-    
-    if (ultimoFechamento === hoje && welcomeTooltip) {
-        welcomeTooltip.classList.add('hidden');
-    } else if (welcomeTooltip) {
-        // ⏱️ Desaparece automaticamente após 3 segundos (depois da splash)
-        setTimeout(() => {
-            welcomeTooltip.classList.add('hidden');
-            localStorage.setItem('welcomeTooltipFechado', hoje);
-        }, 13000); // 10s splash + 3s tooltip
-    }
-    
-    // Fechar a mensagem manualmente (botão X)
-    if (welcomeClose) {
-        welcomeClose.addEventListener('click', () => {
-            welcomeTooltip.classList.add('hidden');
-            localStorage.setItem('welcomeTooltipFechado', hoje);
-        });
-    }
-    
-    // Fechar ao clicar no botão de paciência
-    if (btnPaciencia && welcomeTooltip) {
-        btnPaciencia.addEventListener('click', () => {
-            welcomeTooltip.classList.add('hidden');
-            localStorage.setItem('welcomeTooltipFechado', hoje);
-        }, { once: true });
-    }
-})();
-
-// ============================================
 // MENU HAMBÚRGUER
 // ============================================
 
@@ -150,6 +111,44 @@ const jogos = [
     [1, 3, 4, 7, 9, 10, 13, 14, 15, 17, 18, 19, 21, 22, 23]
 ];
 
+const TOTAL_TEIMOSINHAS = 24;
+const CONCURSO_INICIAL_TEIMOSINHA = 3619;
+const DATA_INICIAL_TEIMOSINHA = '23/02/2026';
+const DIAS_SEMANA = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+function parseDataBR(dataBR) {
+    if (!dataBR || typeof dataBR !== 'string') return null;
+    const partes = dataBR.split('/');
+    if (partes.length !== 3) return null;
+
+    const dia = Number(partes[0]);
+    const mes = Number(partes[1]);
+    const ano = Number(partes[2]);
+    if (!dia || !mes || !ano) return null;
+
+    const data = new Date(ano, mes - 1, dia);
+    data.setHours(0, 0, 0, 0);
+    return data;
+}
+
+function formatarDataBR(data) {
+    return data.toLocaleDateString('pt-BR');
+}
+
+function obterDiaSemana(dataBR) {
+    const data = parseDataBR(dataBR);
+    return data ? DIAS_SEMANA[data.getDay()] : '';
+}
+
+function criarInfoConcurso(numero, dataBR, indice) {
+    return {
+        numero: indice + 1,
+        data: dataBR,
+        dia: obterDiaSemana(dataBR),
+        concurso: numero
+    };
+}
+
 // Mapeamento de concursos - DINÂMICO desde o 3619 até o atual
 // Teimosinha de 24 sorteios a partir de 23/02/2026
 function gerarConcursosTeimosinha() {
@@ -200,6 +199,45 @@ const verificacaoContainer = document.getElementById('verificacaoContainer');
 
 let todosResultados = [];
 
+// ============================================
+// 🔄 AUTO-VERIFICAÇÃO — Detecta novo sorteio assim que a API atualiza
+// ============================================
+let _autoVerificandoEmAndamento = false;
+
+/**
+ * Busca o concurso mais recente na API e, se for novo,
+ * dispara a verificação automática sem necessidade de interação.
+ * Chamado ao abrir o app, ao retomar visibilidade e a cada 5 min.
+ */
+async function autoVerificarNovoResultado() {
+    if (_autoVerificandoEmAndamento) return;
+    try {
+        const resp = await fetch(
+            'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil',
+            { cache: 'no-store' }
+        );
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!data.numero || !data.listaDezenas || data.listaDezenas.length === 0) return;
+
+        const ultimoVerificado = parseInt(localStorage.getItem('ultimoConcursoVerificado') || '0');
+        if (data.numero > ultimoVerificado) {
+            console.log(`[AutoVerificar] 🆕 Concurso ${data.numero} novo! Verificando automaticamente...`);
+            dispararVerificacaoAutomatica();
+        }
+    } catch (_) {}
+}
+
+/** Clica no botão principal de verificação (se não estiver ocupado) */
+function dispararVerificacaoAutomatica() {
+    const btn = document.getElementById('btnBuscarResultado');
+    if (!btn || btn.disabled) return;
+    _autoVerificandoEmAndamento = true;
+    console.log('[AutoVerificar] Disparando verificação automática...');
+    btn.click();
+    btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 btnBuscarResultado.addEventListener('click', async () => {
     try {
         // Mostrar loading no botão
@@ -220,6 +258,7 @@ btnBuscarResultado.addEventListener('click', async () => {
                 const dadosLatest = await resLatest.json();
                 if (dadosLatest.numero && dadosLatest.numero >= 3619) {
                     concursoMaisRecente = dadosLatest.numero;
+                    atualizarConcursosTeimosinha(dadosLatest.numero, dadosLatest.dataApuracao);
                     console.log(`✅ Concurso mais recente detectado pela API: ${concursoMaisRecente}`);
                 }
             }
@@ -254,8 +293,11 @@ btnBuscarResultado.addEventListener('click', async () => {
                     // Verificar se tem números sorteados
                     if (dados.listaDezenas && dados.listaDezenas.length > 0) {
                         console.log(`✅ Concurso ${concursoInfo.concurso} encontrado e CONFERIDO!`);
+                        const dataOficial = dados.dataApuracao || concursoInfo.data;
                         todosResultados.push({
                             ...concursoInfo,
+                            data: dataOficial,
+                            dia: obterDiaSemana(dataOficial) || concursoInfo.dia,
                             dados: dados,
                             numerosSorteados: dados.listaDezenas.map(n => parseInt(n))
                         });
@@ -321,9 +363,16 @@ btnBuscarResultado.addEventListener('click', async () => {
         // Scroll suave até o resultado
         resultadoContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
+        // Salva o número do último concurso verificado para a auto-verificação
+        if (todosResultados.length > 0) {
+            const ultimoNum = todosResultados[todosResultados.length - 1].concurso;
+            localStorage.setItem('ultimoConcursoVerificado', String(ultimoNum));
+        }
+
         // Restaurar botão
         btnBuscarResultado.textContent = '🤖 Verificar Todos os Concursos da Teimosinha';
         btnBuscarResultado.disabled = false;
+        _autoVerificandoEmAndamento = false;
 
     } catch (error) {
         console.error('❌ Erro geral:', error);
@@ -332,6 +381,7 @@ btnBuscarResultado.addEventListener('click', async () => {
         // Restaurar botão
         btnBuscarResultado.textContent = '🤖 Verificar Todos os Concursos da Teimosinha';
         btnBuscarResultado.disabled = false;
+        _autoVerificandoEmAndamento = false;
     }
 });
 
@@ -805,10 +855,106 @@ const teimosinhaConcursos = [
     { numero: 24, data: '21/03/2026', dia: 'Sábado', concurso: 3642 }
 ];
 
+function gerarConcursosPorConcursoFinal(concursoFinal, dataFinalBR) {
+    const dataFinal = parseDataBR(dataFinalBR);
+    if (!dataFinal || !concursoFinal) return [];
+
+    const concursos = [];
+    let numeroConcurso = concursoFinal;
+    let dataAtual = new Date(dataFinal);
+
+    while (concursos.length < TOTAL_TEIMOSINHAS && numeroConcurso >= CONCURSO_INICIAL_TEIMOSINHA) {
+        if (dataAtual.getDay() !== 0) {
+            concursos.unshift(criarInfoConcurso(numeroConcurso, formatarDataBR(dataAtual), 0));
+            numeroConcurso--;
+        }
+
+        dataAtual.setDate(dataAtual.getDate() - 1);
+    }
+
+    concursos.forEach((concurso, index) => {
+        concurso.numero = index + 1;
+    });
+
+    return concursos;
+}
+
+function atualizarConcursosTeimosinha(concursoFinal, dataFinalBR) {
+    const concursosAtualizados = gerarConcursosPorConcursoFinal(concursoFinal, dataFinalBR);
+    if (concursosAtualizados.length === 0) return;
+
+    teimosinhaConcursos.splice(0, teimosinhaConcursos.length, ...concursosAtualizados);
+    concursosTeimosinha.splice(0, concursosTeimosinha.length, ...concursosAtualizados);
+    renderizarCalendarioTeimosinha();
+    gerar24BotoesTeimosinha();
+}
+
+function renderizarCalendarioTeimosinha() {
+    const lista = document.getElementById('calendarioTeimosinhaLista');
+    const subtitle = document.getElementById('calendarioSubtitle');
+    if (!lista) return;
+
+    lista.innerHTML = teimosinhaConcursos.map((teimosinha, index) => {
+        const classeFinal = index === teimosinhaConcursos.length - 1 ? ' destaque-final' : '';
+        return `<div class="dia-item${classeFinal}">${teimosinha.numero}ª Teimosinha - ${teimosinha.dia}, ${teimosinha.data} (Concurso ${teimosinha.concurso})</div>`;
+    }).join('');
+
+    if (subtitle && teimosinhaConcursos.length > 0) {
+        const primeiro = teimosinhaConcursos[0];
+        const ultimo = teimosinhaConcursos[teimosinhaConcursos.length - 1];
+        subtitle.textContent = `24 sorteios mais recentes: ${primeiro.data} a ${ultimo.data} (Concursos ${primeiro.concurso} a ${ultimo.concurso})`;
+    }
+}
+
+async function atualizarCalendarioComUltimoConcurso() {
+    try {
+        const response = await fetch(
+            'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil',
+            { cache: 'no-store' }
+        );
+        if (!response.ok) return;
+
+        const dados = await response.json();
+        if (dados.numero && dados.dataApuracao) {
+            atualizarConcursosTeimosinha(dados.numero, dados.dataApuracao);
+            const concursosComDatasOficiais = await Promise.all(
+                teimosinhaConcursos.map(async (teimosinha) => {
+                    try {
+                        const concursoResponse = await fetch(
+                            `https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil/${teimosinha.concurso}`,
+                            { cache: 'no-store' }
+                        );
+                        if (!concursoResponse.ok) return teimosinha;
+
+                        const concursoDados = await concursoResponse.json();
+                        const dataOficial = concursoDados.dataApuracao || teimosinha.data;
+                        return {
+                            ...teimosinha,
+                            data: dataOficial,
+                            dia: obterDiaSemana(dataOficial) || teimosinha.dia
+                        };
+                    } catch (_) {
+                        return teimosinha;
+                    }
+                })
+            );
+
+            teimosinhaConcursos.splice(0, teimosinhaConcursos.length, ...concursosComDatasOficiais);
+            concursosTeimosinha.splice(0, concursosTeimosinha.length, ...concursosComDatasOficiais);
+            renderizarCalendarioTeimosinha();
+            gerar24BotoesTeimosinha();
+        }
+    } catch (error) {
+        console.warn('Não foi possível atualizar o calendário da Lotofácil:', error);
+    }
+}
+
 // Inicializar os 24 botões quando a página carregar
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🎯 Inicializando 24 botões das teimosinhas...');
+    renderizarCalendarioTeimosinha();
     gerar24BotoesTeimosinha();
+    atualizarCalendarioComUltimoConcurso();
     setupBotoesEventos();
 });
 
@@ -916,8 +1062,11 @@ async function verificarConcursoTeimosinha(teimosinha) {
             
             if (dados.listaDezenas && dados.listaDezenas.length > 0) {
                 console.log(`✅ Dados oficiais encontrados para concurso ${teimosinha.concurso}`);
+                const dataOficial = dados.dataApuracao || teimosinha.data;
                 resultado = {
                     ...teimosinha,
+                    data: dataOficial,
+                    dia: obterDiaSemana(dataOficial) || teimosinha.dia,
                     dados: dados,
                     numerosSorteados: dados.listaDezenas.map(n => parseInt(n)),
                     oficial: true
@@ -1906,28 +2055,41 @@ const CelebracaoManager = {
         modal.onclick = e => { if (e.target === modal) fechar(); };
     },
 
-    // Verifica todos os resultados e abre a celebração para a melhor pontuação
+    // Verifica todos os resultados e abre a celebração APENAS para concursos
+    // com 13+ pontos que ainda não foram celebrados (evita reaparecer na auto-atualização).
     verificarECelebrar(resultados) {
         if (!resultados || resultados.length === 0) return;
 
-        let melhorPts = 0;
-        let valorMelhor = 0;
-        const totalAcumulado = NotificacaoManager.obterTotalAcumulado();
+        const ultimoCelebrado = parseInt(localStorage.getItem('ultimoConcursoCelebrado') || '0');
+        const totalAcumulado  = NotificacaoManager.obterTotalAcumulado();
+
+        // Para cada resultado, do mais antigo ao mais recente, verifica se há
+        // algum jogo com 13+ pontos em um concurso que ainda não foi celebrado.
+        let melhorPts    = 0;
+        let valorMelhor  = 0;
+        let concursoCom13 = 0; // número do concurso onde ocorreu a melhor pontuação
 
         resultados.forEach(resultado => {
             if (!resultado.dados || !resultado.dados.listaRateioPremio) return;
+            // Ignora concursos que já geraram celebração
+            if (resultado.concurso <= ultimoCelebrado) return;
+
             jogos.forEach(jogo => {
                 const acertos = jogo.filter(n => resultado.numerosSorteados.includes(n)).length;
-                if (acertos >= 13 && acertos > melhorPts) {
-                    const faixa = 16 - acertos;
+                if (acertos >= 14 && acertos > melhorPts) {
+                    const faixa    = 16 - acertos;
                     const premioObj = resultado.dados.listaRateioPremio.find(p => p.faixa === faixa);
-                    melhorPts   = acertos;
-                    valorMelhor = premioObj ? premioObj.valorPremio : 0;
+                    melhorPts     = acertos;
+                    valorMelhor   = premioObj ? premioObj.valorPremio : 0;
+                    concursoCom13 = resultado.concurso;
                 }
             });
         });
 
-        if (melhorPts >= 13) {
+        if (melhorPts >= 14 && concursoCom13 > ultimoCelebrado) {
+            // Marca este concurso como celebrado ANTES de abrir o modal,
+            // prevenindo re-exibição caso a auto-verificação rode enquanto o modal está aberto.
+            localStorage.setItem('ultimoConcursoCelebrado', String(concursoCom13));
             // Pequeno delay para o DOM dos resultados já estar renderizado
             setTimeout(() => this.abrir(melhorPts, valorMelhor, totalAcumulado), 800);
         }
@@ -1935,8 +2097,17 @@ const CelebracaoManager = {
 };
 
 // ============================================
-// 🔔 GERENCIADOR DE NOTIFICAÇÕES PUSH
+// 🔔 GERENCIADOR DE NOTIFICAÇÕES — Web Push VAPID (sem OneSignal)
 // ============================================
+
+// 🔑 Chave pública VAPID gerada para este app
+// Par com a chave privada configurada no push-server (veja push-server/README.md)
+const VAPID_PUBLIC_KEY = 'BF7CTJu4zV4BzsxBG_YKGqMGqHZS26FDppElgcOe8uKyiLht6Q_LOy_02CH7dEK9KUrrzlgfTw3lSXooY71Nr60';
+
+// URL do servidor de push (Cloudflare Worker ou servidor Node.js com web-push)
+// Deixe vazio para notificações apenas quando o app está aberto.
+// Preencha após configurar: ex. 'https://milionarios-push.SEU-NOME.workers.dev'
+const PUSH_SERVER_URL = localStorage.getItem('pushServerUrl') || '';
 
 // Horários diários agendados (no fuso de Brasília)
 const HORARIOS_NOTIFICACAO = ['10:00', '15:00', '18:00', '21:30'];
@@ -1976,7 +2147,7 @@ const NotificacaoManager = {
         }
     },
 
-    // Solicita permissão ao usuário — usa OneSignal se disponível
+    // Solicita permissão e cria subscription VAPID Web Push nativa
     async solicitar() {
         if (!this.temSuporte()) {
             alert('Seu navegador não suporta notificações.');
@@ -1991,37 +2162,35 @@ const NotificacaoManager = {
             return false;
         }
 
-        // Se OneSignal já está carregado, usa opt-in (push funciona com app fechado)
-        if (window._oneSignalInstance) {
-            try {
-                await window._oneSignalInstance.User.PushSubscription.optIn();
-            } catch (err) {
-                console.warn('[Notificações] OneSignal optIn falhou:', err);
-            }
-            localStorage.setItem('notificacoesAtivas', 'true');
-            this.atualizarBotao();
-            this.checarNovoResultado();
-            return true;
-        }
-
-        // Fallback: requestPermission nativa (sem OneSignal)
         const permissao = await Notification.requestPermission();
-
         if (permissao !== 'granted') {
             this.atualizarBotao();
             return false;
         }
 
-        // Atualiza o botão IMEDIATAMENTE — sem esperar o SW
+        // Cria subscription VAPID via Service Worker
+        try {
+            const reg = await this._swReady(8000);
+            let subscription = await reg.pushManager.getSubscription();
+            if (!subscription) {
+                subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: this._urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+            }
+            localStorage.setItem('pushSubscription', JSON.stringify(subscription));
+            console.log('[Notificações] Push subscription criada:', subscription.endpoint);
+
+            // Envia subscription ao servidor de push (se configurado)
+            await this._enviarSubscriptionParaServidor(subscription);
+        } catch (err) {
+            console.warn('[Notificações] Push subscription falhou (operações locais ainda ativas):', err.message);
+        }
+
         localStorage.setItem('notificacoesAtivas', 'true');
         this.atualizarBotao();
-
-        // Registra Periodic Sync em background (não bloqueia)
         this._registrarPeriodicSync();
-
-        // Verifica resultado (também em background)
         this.checarNovoResultado();
-
         return true;
     },
 
@@ -2049,21 +2218,21 @@ const NotificacaoManager = {
     },
 
     async desativar() {
-        // OneSignal opt-out se disponível
-        if (window._oneSignalInstance) {
-            try {
-                await window._oneSignalInstance.User.PushSubscription.optOut();
-            } catch (err) {
-                console.warn('[Notificações] OneSignal optOut falhou:', err);
-            }
-        }
+        // Remove subscription VAPID do navegador
         try {
             const reg = await this._swReady(3000);
+            const subscription = await reg.pushManager.getSubscription();
+            if (subscription) {
+                // Notifica servidor para remover a subscription
+                await this._removerSubscriptionDoServidor(subscription);
+                await subscription.unsubscribe();
+            }
             if ('periodicSync' in reg) {
-                await reg.periodicSync.unregister('check-lotofacil-resultado');
+                await reg.periodicSync.unregister('check-lotofacil-resultado').catch(() => {});
             }
         } catch (_) {}
         localStorage.removeItem('notificacoesAtivas');
+        localStorage.removeItem('pushSubscription');
         localStorage.removeItem('ultimoConcursoNotificado');
         HORARIOS_NOTIFICACAO.forEach(h => localStorage.removeItem(`notif_horario_${h.replace(':', '_')}`));
         this.atualizarBotao();
@@ -2429,26 +2598,6 @@ const NotificacaoManager = {
         const btn = document.getElementById('btnNotificacoes');
         if (!btn) return;
 
-        // Usa estado do OneSignal se disponível
-        const oneSignal = window._oneSignalInstance;
-        if (oneSignal) {
-            const optedIn = oneSignal.User?.PushSubscription?.optedIn;
-            if (Notification.permission === 'denied') {
-                btn.textContent = '🔕 Notificações bloqueadas';
-                btn.classList.add('btn-notificacoes--bloqueado');
-                btn.classList.remove('btn-notificacoes--ativo');
-            } else if (optedIn) {
-                btn.textContent = '🔔 Notificações Ativas ✓';
-                btn.classList.add('btn-notificacoes--ativo');
-                btn.classList.remove('btn-notificacoes--bloqueado');
-            } else {
-                btn.textContent = '🔔 Ativar Notificações';
-                btn.classList.remove('btn-notificacoes--ativo');
-                btn.classList.remove('btn-notificacoes--bloqueado');
-            }
-            return;
-        }
-
         const estado = this.estadoPermissao();
         const ativo = localStorage.getItem('notificacoesAtivas') === 'true';
 
@@ -2475,16 +2624,6 @@ const NotificacaoManager = {
     },
 
     async toggle() {
-        // Se OneSignal disponível, decide com base no seu estado
-        if (window._oneSignalInstance) {
-            const optedIn = window._oneSignalInstance.User?.PushSubscription?.optedIn;
-            if (optedIn) {
-                await this.desativar();
-            } else {
-                await this.solicitar();
-            }
-            return;
-        }
         const ativo = localStorage.getItem('notificacoesAtivas') === 'true'
             && Notification.permission === 'granted';
         if (ativo) {
@@ -2492,6 +2631,53 @@ const NotificacaoManager = {
         } else {
             await this.solicitar();
         }
+    },
+
+    // 🔑 Converte chave VAPID base64url para Uint8Array
+    _urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    },
+
+    // Envia subscription ao push server (Cloudflare Worker ou Node.js)
+    async _enviarSubscriptionParaServidor(subscription) {
+        const serverUrl = PUSH_SERVER_URL;
+        if (!serverUrl) {
+            console.log('[Notificações] Servidor de push não configurado (PUSH_SERVER_URL vazio).');
+            console.log('[Notificações] Notificações funcionarão apenas com o app aberto.');
+            return;
+        }
+        try {
+            const res = await fetch(`${serverUrl}/subscribe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(subscription)
+            });
+            if (res.ok) {
+                console.log('[Notificações] Subscription enviada ao servidor! Push funcionará com app fechado.');
+            }
+        } catch (err) {
+            console.warn('[Notificações] Erro ao enviar subscription ao servidor:', err.message);
+        }
+    },
+
+    // Remove subscription do push server
+    async _removerSubscriptionDoServidor(subscription) {
+        const serverUrl = PUSH_SERVER_URL;
+        if (!serverUrl) return;
+        try {
+            await fetch(`${serverUrl}/unsubscribe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ endpoint: subscription.endpoint })
+            });
+        } catch (_) {}
     }
 };
 
@@ -2517,28 +2703,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ao abrir o app via clique na notificação (?autoVerificar=1), disparar busca automática
     if (new URLSearchParams(window.location.search).get('autoVerificar') === '1') {
         console.log('[App] Aberto via notificação — iniciando verificação automática...');
-        setTimeout(() => {
-            const btn = document.getElementById('btnBuscarResultado');
-            if (btn && !btn.disabled) {
-                btn.click();
-                btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }, 1500); // Aguarda o app carregar completamente
+        setTimeout(() => dispararVerificacaoAutomatica(), 1500);
+    } else {
+        // Ao abrir o app normalmente, verifica silenciosamente se há resultado novo
+        setTimeout(() => autoVerificarNovoResultado(), 2500);
     }
+
+    // Ao voltar para o app (desbloquear tela, trocar aba, etc.), verifica imediatamente
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            autoVerificarNovoResultado();
+        }
+    });
+
+    // Polling a cada 5 minutos enquanto o app está aberto no browser/PWA
+    setInterval(() => autoVerificarNovoResultado(), 5 * 60 * 1000);
+
+    console.log('[AutoVerificar] Monitoramento de novos sorteios ativo (polling 5 min + visibilitychange)');
 });
 
-// Listener de mensagem do Service Worker (notificationclick → autoVerificar)
+// Listener de mensagem do Service Worker (notificationclick → autoVerificar / NOVO_RESULTADO)
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data?.type === 'BUSCAR_RESULTADO') {
-            console.log('[App] Mensagem do SW: iniciar busca de resultado');
+        const tipo = event.data?.type;
+        if (tipo === 'BUSCAR_RESULTADO' || tipo === 'NOVO_RESULTADO') {
+            console.log(`[App] Mensagem do SW (${tipo}): novo resultado — iniciando verificação...`);
             // Toca o som quando o app é aberto/focado via clique na notificação
             try { new Audio('./dinheiro2.mp3').play(); } catch (_) {}
-            const btn = document.getElementById('btnBuscarResultado');
-            if (btn && !btn.disabled) {
-                btn.click();
-                btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            dispararVerificacaoAutomatica();
         }
     });
 }

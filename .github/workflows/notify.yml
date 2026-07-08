@@ -22,13 +22,23 @@ name: Notificacoes Milionarios da Leograf
 on:
   schedule:
     # ── Lembretes diários (todos os dias) ──────── Horário de Brasília = UTC-3
-    - cron: '0 13 * * *'    # 10:00 BRT — lembrete matinal    - cron: '50 14 * * *'   # 11:50 BRT — TESTE    - cron: '0 18 * * *'    # 15:00 BRT — lembrete tarde
+    - cron: '0 13 * * *'    # 10:00 BRT — lembrete matinal
+    - cron: '0 18 * * *'    # 15:00 BRT — lembrete tarde
     - cron: '0 21 * * *'    # 18:00 BRT — lembrete noite
     # ── Resultado Lotofácil (sorteio ~20:00 BRT, segunda a sábado) ───────────
     - cron: '35 23 * * 1-6' # 20:35 BRT seg-sáb — 1ª tentativa (logo após sorteio)
     - cron: '30 0 * * 0,2-6'  # 21:30 BRT seg-sáb — 2ª tentativa (resultado consolidado)
     - cron: '0 1 * * 0,2-6'   # 22:00 BRT seg-sáb — 3ª tentativa (fallback)
-  workflow_dispatch:          # Permite disparar manualmente pelo GitHub Actions
+  workflow_dispatch:
+    inputs:
+      tipo:
+        description: 'Tipo de notificação a enviar manualmente'
+        required: true
+        default: 'lembrete'
+        type: choice
+        options:
+          - lembrete
+          - resultado
 
 permissions:
   actions: write
@@ -47,9 +57,9 @@ jobs:
       - name: Notificação de horário agendado
         if: |
           github.event.schedule == '0 13 * * *' ||
-          github.event.schedule == '50 14 * * *' ||
           github.event.schedule == '0 18 * * *' ||
-          github.event.schedule == '0 21 * * *'
+          github.event.schedule == '0 21 * * *' ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.tipo == 'lembrete')
         env:
           ONESIGNAL_APP_ID: "9fc449ea-ce6f-462d-a3eb-1476569c151b"
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
@@ -61,13 +71,21 @@ jobs:
           fi
 
           SCHEDULE="${{ github.event.schedule }}"
-          case "$SCHEDULE" in
-            "0 13 * * *")  HORA="10:00" EMOJI="🌅" ;;
-            "50 14 * * *") HORA="11:50" EMOJI="🧪" ;;
-            "0 18 * * *")  HORA="15:00" EMOJI="☀️"  ;;
-            "0 21 * * *")  HORA="18:00" EMOJI="🌆"  ;;
-            *) echo "Cron não reconhecido; saindo."; exit 0 ;;
-          esac
+          TIPO_INPUT="${{ github.event.inputs.tipo }}"
+
+          # Determina o horário pelo cron ou usa horário atual se for manual
+          if [ "$TIPO_INPUT" = "lembrete" ]; then
+            # Disparado manualmente — usa hora atual de Brasília
+            HORA=$(TZ='America/Sao_Paulo' date '+%H:%M')
+            EMOJI="🔔"
+          else
+            case "$SCHEDULE" in
+              "0 13 * * *")  HORA="10:00" EMOJI="🌅" ;;
+              "0 18 * * *")  HORA="15:00" EMOJI="☀️"  ;;
+              "0 21 * * *")  HORA="18:00" EMOJI="🌆"  ;;
+              *) echo "Cron não reconhecido; saindo."; exit 0 ;;
+            esac
+          fi
 
           echo "📣 Enviando lembrete das ${HORA}h BRT..."
           HTTP=$(curl -s -o /tmp/os_resp.json -w "%{http_code}" \
@@ -84,8 +102,20 @@ jobs:
               \"firefox_icon\":    \"${APP_URL}logo-header.png\",
               \"small_icon\":      \"logo-header\"
             }")
-          echo "HTTP $HTTP — $(cat /tmp/os_resp.json)"
-          [ "$HTTP" = "200" ] && echo "✅ Lembrete enviado!" || echo "⚠️  Falha ao enviar (HTTP $HTTP)"
+          RESP=$(cat /tmp/os_resp.json)
+          echo "HTTP $HTTP — $RESP"
+          # Verifica erros dentro do JSON de resposta do OneSignal
+          ERRORS=$(echo "$RESP" | jq -r '.errors // [] | if type == "array" then join(", ") else . end' 2>/dev/null || echo "")
+          RECIPIENTS=$(echo "$RESP" | jq -r '.recipients // "?"' 2>/dev/null || echo "?")
+          if [ "$HTTP" = "200" ] && [ -z "$ERRORS" ]; then
+            echo "✅ Lembrete enviado para ${RECIPIENTS} dispositivo(s)!"
+          elif [ -n "$ERRORS" ]; then
+            echo "❌ OneSignal retornou erro(s): $ERRORS"
+            exit 1
+          else
+            echo "⚠️  Falha ao enviar (HTTP $HTTP)"
+            exit 1
+          fi
 
       # ═══════════════════════════════════════════════════════════════════════
       # PASSO 2 — BUSCAR RESULTADO DA LOTOFÁCIL NA API DA CAIXA
@@ -96,7 +126,7 @@ jobs:
           github.event.schedule == '35 23 * * 1-6' ||
           github.event.schedule == '30 0 * * 0,2-6'  ||
           github.event.schedule == '0 1 * * 0,2-6'   ||
-          github.event_name == 'workflow_dispatch'
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.tipo == 'resultado')
         id: resultado
         run: |
           echo "🔍 Consultando API da Caixa..."

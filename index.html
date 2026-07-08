@@ -165,18 +165,6 @@
             
             <!-- Botão Buscar Resultado -->
             <div class="botao-container">
-                <!-- � MENSAGEM DE BOAS-VINDAS - Apontar para o jogo -->
-                <div id="welcomeTooltip" class="welcome-tooltip">
-                    <div class="welcome-content">
-                        <button class="welcome-close" id="welcomeClose">✖</button>
-                        <div class="welcome-icon">🎮</div>
-                        <h3>Bem-vindo, Milionário! 🦁</h3>
-                        <p>Enquanto espera o sorteio, que tal um jogo?</p>
-                        <p class="welcome-destaque">👇 Clique aqui para jogar! 👇</p>
-                        <div class="welcome-arrow"></div>
-                    </div>
-                </div>
-                
                 <!-- �🃏 BOTÃO DO JOGO DE PACIÊNCIA -->
                 <button id="btnPaciencia" class="btn-resultado btn-paciencia">
                     🃏 Jogar Paciência da Sorte
@@ -280,7 +268,7 @@
             <div id="verificacaoContainer" class="verificacao-container" style="display: none;">
                 <h3 class="verificacao-title">🎯 Análise Completa - TODOS os Concursos da Teimosinha</h3>
                 <p style="color: #f39c12; text-align: center; margin-bottom: 25px; font-size: 16px;">
-                    📈 <strong>Teimosinha 24x a partir de 23/02/2026 (Concurso 3619)</strong><br>
+                    📈 <strong>Conferência atualizada pelos concursos oficiais da Lotofácil</strong><br>
                     🎲 <strong>20 jogos por sorteio</strong><br>
                     💎 Prêmios calculados para 11, 12, 13, 14 e 15 pontos em TODOS os concursos<br>
                     🏆 Total acumulado histórico de todos os 20 jogos<br>
@@ -318,36 +306,10 @@
             <!-- Calendário de Teimosinhas -->
             <div class="calendario-section">
                 <h2 class="calendario-title">CALENDÁRIO DAS TEIMOSINHAS</h2>
-                <p class="calendario-subtitle">24 Sorteios Consecutivos a partir de 23/02/2026 (Exceto Domingos)</p>
+                <p class="calendario-subtitle" id="calendarioSubtitle">24 sorteios mais recentes da Lotofácil (exceto domingos)</p>
                 
-                <div class="dias-lista">
-                    <div class="dia-item">1ª Teimosinha - Segunda-feira, 23/02/2026 (Concurso 3619)</div>
-                    <div class="dia-item">2ª Teimosinha - Terça-feira, 24/02/2026 (Concurso 3620)</div>
-                    <div class="dia-item">3ª Teimosinha - Quarta-feira, 25/02/2026 (Concurso 3621)</div>
-                    <div class="dia-item">4ª Teimosinha - Quinta-feira, 26/02/2026 (Concurso 3622)</div>
-                    <div class="dia-item">5ª Teimosinha - Sexta-feira, 27/02/2026 (Concurso 3623)</div>
-                    <div class="dia-item">6ª Teimosinha - Sábado, 28/02/2026 (Concurso 3624)</div>
-                    <div class="dia-item domingo-pulado">❌ Domingo, 01/03/2026 (Não há sorteio)</div>
-                    <div class="dia-item">7ª Teimosinha - Segunda-feira, 02/03/2026 (Concurso 3625)</div>
-                    <div class="dia-item">8ª Teimosinha - Terça-feira, 03/03/2026 (Concurso 3626)</div>
-                    <div class="dia-item">9ª Teimosinha - Quarta-feira, 04/03/2026 (Concurso 3627)</div>
-                    <div class="dia-item">10ª Teimosinha - Quinta-feira, 05/03/2026 (Concurso 3628)</div>
-                    <div class="dia-item">11ª Teimosinha - Sexta-feira, 06/03/2026 (Concurso 3629)</div>
-                    <div class="dia-item">12ª Teimosinha - Sábado, 07/03/2026 (Concurso 3630)</div>
-                    <div class="dia-item domingo-pulado">❌ Domingo, 08/03/2026 (Não há sorteio)</div>
-                    <div class="dia-item">13ª Teimosinha - Segunda-feira, 09/03/2026 (Concurso 3631)</div>
-                    <div class="dia-item">14ª Teimosinha - Terça-feira, 10/03/2026 (Concurso 3632)</div>
-                    <div class="dia-item">15ª Teimosinha - Quarta-feira, 11/03/2026 (Concurso 3633)</div>
-                    <div class="dia-item">16ª Teimosinha - Quinta-feira, 12/03/2026 (Concurso 3634)</div>
-                    <div class="dia-item">17ª Teimosinha - Sexta-feira, 13/03/2026 (Concurso 3635)</div>
-                    <div class="dia-item">18ª Teimosinha - Sábado, 14/03/2026 (Concurso 3636)</div>
-                    <div class="dia-item domingo-pulado">❌ Domingo, 15/03/2026 (Não há sorteio)</div>
-                    <div class="dia-item">19ª Teimosinha - Segunda-feira, 16/03/2026 (Concurso 3637)</div>
-                    <div class="dia-item">20ª Teimosinha - Terça-feira, 17/03/2026 (Concurso 3638)</div>
-                    <div class="dia-item">21ª Teimosinha - Quarta-feira, 18/03/2026 (Concurso 3639)</div>
-                    <div class="dia-item">22ª Teimosinha - Quinta-feira, 19/03/2026 (Concurso 3640)</div>
-                    <div class="dia-item">23ª Teimosinha - Sexta-feira, 20/03/2026 (Concurso 3641)</div>
-                    <div class="dia-item destaque-final">24ª Teimosinha - Sábado, 21/03/2026 (Concurso 3642) 🎉 ÚLTIMA!</div>
+                <div class="dias-lista" id="calendarioTeimosinhaLista">
+                    <!-- Calendário gerado dinamicamente pelo JavaScript com a data atual da Lotofácil -->
                 </div>
             </div>
 
@@ -477,11 +439,6 @@
         }
     </script>
 
-    <!-- ================================================================
-         OneSignal SDK — envia push MESMO COM O APP FECHADO
-         ================================================================
-         App ID: 9fc449ea-ce6f-462d-a3eb-1476569c151b
-         ================================================================ -->
     <!-- ✅ Instalação PWA -->
     <script>
         (function () {
@@ -514,23 +471,6 @@
         })();
     </script>
 
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        OneSignalDeferred.push(async function(OneSignal) {
-            await OneSignal.init({
-                appId: "9fc449ea-ce6f-462d-a3eb-1476569c151b",
-                safari_web_id: "web.onesignal.auto.34cabfa2-ddd9-46d0-b8b2-6fad793020e0",
-                serviceWorkerPath: "service-worker.js",
-                serviceWorkerParam: { scope: "./" },
-                serviceWorkerUpdaterPath: "service-worker.js",
-                notifyButton: { enable: false }
-            });
-            window._oneSignalInstance = OneSignal;
-            if (typeof NotificacaoManager !== 'undefined') {
-                NotificacaoManager.atualizarBotao();
-            }
-        });
-    </script>
+    <!-- Web Push VAPID nativo — sem deps externas. Servidor push: push-server/ -->
 </body>
 </html>

@@ -1,10 +1,9 @@
-// ⚠️ importScripts do OneSignal fica ao FINAL para que nossos listeners
-// registrem ANTES dos dele — garantindo que nosso notificationclick rode primeiro.
-// (Adicionado ao final do arquivo)
+// Service Worker — Milionários da Leograf
+// Web Push VAPID nativo (sem OneSignal)
 
-const CACHE_NAME = 'milionarios-v6.6';
-const STATIC_CACHE = 'milionarios-static-v6.6';
-const DYNAMIC_CACHE = 'milionarios-dynamic-v6.6';
+const CACHE_NAME = 'milionarios-v7.0';
+const STATIC_CACHE = 'milionarios-static-v7.0';
+const DYNAMIC_CACHE = 'milionarios-dynamic-v7.0';
 
 // URL do app hardcodada — mais confiável que self.location em todos os contextos PWA
 const APP_BASE_URL = 'https://delima20k.github.io/milionarios-da-leograf0.1/';
@@ -74,67 +73,91 @@ self.addEventListener('activate', event => {
 // e Network First para API calls
 self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
-  
+
+  // ✅ CORRIGIDO: verifica se é realmente um dos nossos arquivos estáticos
+  // (antes o bug era: './' vira '' e url.includes('') é sempre true,
+  //  fazendo Cache First interceptar até chamadas da API da Caixa)
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const staticFiles = CORE_ASSETS
+    .filter(a => a !== './')          // remove o './' que causava o bug
+    .map(a => a.replace('./', ''));   // ['index.html', 'style.css', ...]
+  const isStaticAsset = isSameOrigin && staticFiles.some(f =>
+    requestUrl.pathname.endsWith('/' + f) || requestUrl.pathname === '/' + f
+  );
+
   // Estratégia para recursos estáticos (Cache First)
-  if (CORE_ASSETS.some(asset => event.request.url.includes(asset.replace('./', '')))) {
+  if (isStaticAsset) {
     event.respondWith(
       caches.match(event.request)
         .then(cachedResponse => {
           if (cachedResponse) {
-            console.log('[SW] Servindo do cache:', event.request.url);
+            // Revalida em background para próxima visita
+            fetch(event.request).then(freshResp => {
+              if (freshResp.ok) {
+                caches.open(STATIC_CACHE).then(c => c.put(event.request, freshResp));
+              }
+            }).catch(() => {});
             return cachedResponse;
           }
-          
-          // Se não estiver no cache, busca da rede e cacheia
           return fetch(event.request)
             .then(response => {
-              const responseClone = response.clone();
-              caches.open(STATIC_CACHE)
-                .then(cache => {
-                  cache.put(event.request, responseClone);
-                });
+              if (response.ok) {
+                const responseClone = response.clone();
+                caches.open(STATIC_CACHE).then(cache => cache.put(event.request, responseClone));
+              }
               return response;
             });
         })
         .catch(() => {
-          // Fallback para página offline se disponível
           if (event.request.destination === 'document') {
             return caches.match('./index.html');
           }
         })
     );
   }
-  
-  // Estratégia para chamadas da API (Network First com cache de backup)
+
+  // Estratégia para chamadas da API Lotofácil (Network First — SEMPRE busca dado fresco)
   else if (API_CACHE_URLS.some(pattern => pattern.test(event.request.url))) {
     event.respondWith(
       fetch(event.request)
-        .then(response => {
-          // Se a resposta for bem-sucedida, armazena no cache dinâmico
-          if (response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(DYNAMIC_CACHE)
-              .then(cache => {
-                cache.put(event.request, responseClone);
-              });
+        .then(async networkResponse => {
+          if (networkResponse.ok) {
+            const isIndividualConcurso = /\/api\/lotofacil\/\d+/.test(event.request.url);
+
+            if (isIndividualConcurso) {
+              // ✅ Só cacheia concurso individual se já tiver resultado (listaDezenas preenchido)
+              // Isso evita cachear resultados vazios de concursos futuros
+              const clone = networkResponse.clone();
+              try {
+                const data = await clone.json();
+                if (data.listaDezenas && data.listaDezenas.length > 0) {
+                  const cached = new Response(JSON.stringify(data), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                  caches.open(DYNAMIC_CACHE).then(c => c.put(event.request, cached));
+                }
+              } catch (_) {}
+            } else {
+              // Endpoint sem número (último concurso): sempre cacheia para fallback
+              const responseClone = networkResponse.clone();
+              caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, responseClone));
+            }
           }
-          return response;
+          return networkResponse;
         })
         .catch(() => {
-          // Se a rede falhar, tenta buscar do cache dinâmico
           console.log('[SW] Rede falhou, buscando API do cache...');
           return caches.match(event.request);
         })
     );
   }
-  
-  // Para outras requisições, estratégia padrão
+
+  // Para outras requisições, estratégia padrão (network first)
   else {
     event.respondWith(
       fetch(event.request)
-        .catch(() => {
-          return caches.match(event.request);
-        })
+        .catch(() => caches.match(event.request))
     );
   }
 });
@@ -206,6 +229,15 @@ async function verificarNovoResultadoSW() {
 
     if (data.numero > ultimoNotificado) {
       await store.put('ultimo-concurso-notificado', new Response(String(data.numero)));
+
+      // Avisas as abas/janelas do PWA já abertas para auto-verificar sem precisar clicar
+      try {
+        const allClients = await clients.matchAll({ includeUncontrolled: true, type: 'window' });
+        for (const client of allClients) {
+          client.postMessage({ type: 'NOVO_RESULTADO', concurso: data.numero });
+        }
+        console.log(`[SW] Mensagem NOVO_RESULTADO enviada para ${allClients.length} cliente(s) aberto(s)`);
+      } catch (_) {}
 
       const numeros = data.listaDezenas.join(' - ');
       const dataApuracao = data.dataApuracao || '';
@@ -310,19 +342,47 @@ async function verificarHorariosSW() {
 console.log('[SW] Service Worker Milionários da Leograf carregado!');
 
 // ============================================
-// 🔔 CLIQUE NA NOTIFICAÇÃO — Abre o app e auto-verifica
+// � PUSH EVENT — Recebe notificações via VAPID Web Push (web-push npm)
+// ============================================
+self.addEventListener('push', event => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (_) {
+    payload = {
+      titulo: '🦁 Milionários da Leograf',
+      corpo: event.data ? event.data.text() : 'Novo resultado disponível!'
+    };
+  }
+
+  const titulo = payload.titulo || '🍀 Novo Resultado Lotofácil!';
+  const opcoes = {
+    body: payload.corpo || 'Toque para verificar seus jogos!',
+    icon: APP_BASE_URL + 'logo-header.png',
+    badge: APP_BASE_URL + 'logo-header.png',
+    tag: payload.tag || 'push-milionarios',
+    requireInteraction: payload.requireInteraction !== false,
+    vibrate: payload.vibrate || [200, 100, 200],
+    data: { url: payload.url || (APP_BASE_URL + '?autoVerificar=1') },
+    actions: [
+      { action: 'view', title: '👁️ Ver Resultado' },
+      { action: 'close', title: '✖ Fechar' }
+    ]
+  };
+
+  event.waitUntil(self.registration.showNotification(titulo, opcoes));
+});
+
+// ============================================
+// �🔔 CLIQUE NA NOTIFICAÇÃO — Abre o app e auto-verifica
 // ============================================
 self.addEventListener('notificationclick', event => {
-  // Captura TODOS os cliques (nossas notif locais + push do OneSignal)
-  // event.stopImmediatePropagation() impede que o listener do OneSignal
-  // (registrado depois, via importScripts ao final) também dispare e
-  // cause InvalidAccessError ao tentar abrir janela fora do contexto válido.
   event.stopImmediatePropagation();
   event.notification.close();
 
   if (event.action === 'close') return;
 
-  // URL vem do payload da notificação (push OneSignal) ou usa o padrão local
+  // URL vem do payload da notificação ou usa o padrão do app
   const notifData = event.notification.data;
   const targetUrl = (notifData && notifData.url)
     ? notifData.url
@@ -353,7 +413,4 @@ self.addEventListener('notificationclick', event => {
 });
 console.log('[SW] Versão:', CACHE_NAME);
 console.log('[SW] Recursos principais:', CORE_ASSETS);
-
-// OneSignal importado por último para que nossos listeners (install/activate/fetch/notificationclick)
-// já estejam registrados e tenham prioridade de execução
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+// Web Push VAPID ativo — sem OneSignal

@@ -1,0 +1,73 @@
+# ======================================================================
+# 🔔 Milionários da Leograf — Push Notifications via GitHub Actions
+# ======================================================================
+# Verifica diariamente se saiu novo resultado na API da Lotofácil
+# e envia push notifications para todos os dispositivos inscritos.
+#
+# Como configurar (fazer apenas uma vez):
+#   1. No GitHub: Vá em Settings > Secrets and variables > Actions > Secrets
+#   2. Adicione os seguintes secrets:
+#      - VAPID_PRIVATE_KEY  → TUbOfUZ1GAakQYzP2RvcbFmyNLLQfLJrnvhT5n8_f_8
+#      - VAPID_EMAIL        → mailto:seuemail@gmail.com
+#      - SUBSCRIPTIONS_JSON → Cole o JSON das subscriptions (ver instruções abaixo)
+#
+# Como obter SUBSCRIPTIONS_JSON:
+#   - Abra o app no celular e ative as notificações
+#   - O app salvará a subscription no localStorage (chave: pushSubscription)
+#   - Abra o console do navegador e execute:
+#       JSON.stringify([JSON.parse(localStorage.getItem('pushSubscription'))])
+#   - Cole o resultado no secret SUBSCRIPTIONS_JSON
+#   - Para múltiplos dispositivos, junte os JSONs em um array:
+#       [subscription1, subscription2, ...]
+# ======================================================================
+
+name: "🔔 Push Notifications Lotofácil"
+
+on:
+  # Executa automaticamente em horários estratégicos (fuso de Brasília = UTC-3)
+  schedule:
+    - cron: "0 0 * * 1-6"    # 21h BRT (seg a sab) — logo após o sorteio normal
+    - cron: "30 0 * * 1-6"   # 21h30 BRT — segunda tentativa caso API demore
+    - cron: "0 1 * * 1-6"    # 22h BRT — terceira tentativa
+    - cron: "0 18 * * 1-6"   # 15h BRT — verificação da tarde
+
+  # Permite também disparar manualmente pela interface do GitHub
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Forçar envio mesmo se já notificado hoje"
+        required: false
+        default: "false"
+
+jobs:
+  check-and-notify:
+    name: "Verificar API e Notificar"
+    runs-on: ubuntu-latest
+    # Roda sempre — o script check-and-send.js sai com código 0
+    # silenciosamente quando não há subscriptions configuradas
+
+    steps:
+      - name: "📥 Checkout do repositório"
+        uses: actions/checkout@v4
+
+      - name: "🟢 Setup Node.js 20"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: "📦 Instalar dependências (web-push)"
+        working-directory: push-server
+        run: npm install --omit=dev
+
+      - name: "🔔 Verificar resultado e enviar push"
+        working-directory: push-server
+        env:
+          VAPID_PUBLIC_KEY: "BF7CTJu4zV4BzsxBG_YKGqMGqHZS26FDppElgcOe8uKyiLht6Q_LOy_02CH7dEK9KUrrzlgfTw3lSXooY71Nr60"
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_EMAIL: ${{ secrets.VAPID_EMAIL }}
+          SUBSCRIPTIONS_JSON: ${{ secrets.SUBSCRIPTIONS_JSON }}
+        run: node check-and-send.js
+
+      - name: "✅ Resultado"
+        if: always()
+        run: echo "Workflow concluido em $(date -u '+%Y-%m-%d %H:%M UTC')"
