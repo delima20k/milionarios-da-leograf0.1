@@ -86,6 +86,8 @@ const jogos = [
 const TOTAL_TEIMOSINHAS = 24;
 const CONCURSO_INICIAL_TEIMOSINHA = 3619;
 const DATA_INICIAL_TEIMOSINHA = '23/02/2026';
+const CONCURSO_BASE_ATUAL_LOTOFACIL = 3728;
+const DATA_BASE_ATUAL_LOTOFACIL = '06/07/2026';
 const DIAS_SEMANA = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
 function parseDataBR(dataBR) {
@@ -121,45 +123,61 @@ function criarInfoConcurso(numero, dataBR, indice) {
     };
 }
 
+function obterHojeLocal() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    return hoje;
+}
+
+function obterUltimaDataProvavelSorteio() {
+    const data = obterHojeLocal();
+    data.setDate(data.getDate() - 1);
+
+    while (data.getDay() === 0) {
+        data.setDate(data.getDate() - 1);
+    }
+
+    return data;
+}
+
+function contarSorteiosEntre(dataInicio, dataFim) {
+    let total = 0;
+    const dataAtual = new Date(dataInicio);
+    dataAtual.setDate(dataAtual.getDate() + 1);
+
+    while (dataAtual <= dataFim) {
+        if (dataAtual.getDay() !== 0) total++;
+        dataAtual.setDate(dataAtual.getDate() + 1);
+    }
+
+    return total;
+}
+
+function resolverUltimoConcursoExibicao(dados) {
+    const hoje = obterHojeLocal();
+    const dataProximo = parseDataBR(dados?.dataProximoConcurso);
+
+    if (dados?.numeroConcursoProximo && dataProximo && dataProximo < hoje) {
+        return {
+            concurso: dados.numeroConcursoProximo,
+            data: dados.dataProximoConcurso
+        };
+    }
+
+    return {
+        concurso: dados?.numero || CONCURSO_BASE_ATUAL_LOTOFACIL,
+        data: dados?.dataApuracao || DATA_BASE_ATUAL_LOTOFACIL
+    };
+}
 // Mapeamento de concursos - DINÂMICO desde o 3619 até o atual
 // Teimosinha de 24 sorteios a partir de 23/02/2026
 function gerarConcursosTeimosinha() {
-    const concursos = [];
-    // Usar formato com horário para evitar problemas de fuso horário
-    const dataInicio = new Date(2026, 1, 23); // 23/02/2026 - Concurso 3619 (Teimosinha 24x)
-    const hoje = new Date();
-    
-    // Gerar todos os 24 concursos da teimosinha independente da data atual
-    let concursoAtual = 3619;
-    let dataAtual = new Date(dataInicio);
-    
-    const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-    
-    // Gerar todos os 24 concursos da teimosinha
-    while (concursos.length < 24) {
-        const diaSemana = dataAtual.getDay();
-        
-        // Lotofácil não tem sorteio aos domingos
-        if (diaSemana !== 0) {
-            const dataFormatada = dataAtual.toLocaleDateString('pt-BR');
-            const diaTexto = diasSemana[diaSemana];
-            
-            concursos.push({
-                data: dataFormatada,
-                concurso: concursoAtual,
-                dia: diaTexto
-            });
-            
-            concursoAtual++;
-        }
-        
-        // Avançar para o próximo dia
-        dataAtual.setDate(dataAtual.getDate() + 1);
-    }
-    
-    console.log(`📅 Gerados ${concursos.length} concursos para verificação (do 3619 até ${concursoAtual - 1})`);
-    console.log(`📊 Teimosinha 24x iniciada em 23/02/2026 - 20 jogos por sorteio`);
-    return concursos;
+    const dataBase = parseDataBR(DATA_BASE_ATUAL_LOTOFACIL);
+    const ultimaData = obterUltimaDataProvavelSorteio();
+    const concursosDesdeBase = contarSorteiosEntre(dataBase, ultimaData);
+    const concursoFinal = CONCURSO_BASE_ATUAL_LOTOFACIL + concursosDesdeBase;
+
+    return gerarConcursosPorConcursoFinal(concursoFinal, formatarDataBR(ultimaData));
 }
 
 // Gerar lista dinâmica de concursos
@@ -229,8 +247,9 @@ btnBuscarResultado.addEventListener('click', async () => {
             if (resLatest.ok) {
                 const dadosLatest = await resLatest.json();
                 if (dadosLatest.numero && dadosLatest.numero >= 3619) {
-                    concursoMaisRecente = dadosLatest.numero;
-                    atualizarConcursosTeimosinha(dadosLatest.numero, dadosLatest.dataApuracao);
+                    const ultimoExibicao = resolverUltimoConcursoExibicao(dadosLatest);
+                    concursoMaisRecente = ultimoExibicao.concurso;
+                    atualizarConcursosTeimosinha(ultimoExibicao.concurso, ultimoExibicao.data);
                     console.log(`✅ Concurso mais recente detectado pela API: ${concursoMaisRecente}`);
                 }
             }
@@ -329,9 +348,6 @@ btnBuscarResultado.addEventListener('click', async () => {
         // Notificar no celular: jogos premiados + total acumulado
         NotificacaoManager.notificarResultadoEncontrado(todosResultados);
 
-        // Celebração visual no app (confetes + modal) se houver 13+ pontos
-        CelebracaoManager.verificarECelebrar(todosResultados);
-        
         // Scroll suave até o resultado
         resultadoContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
@@ -799,33 +815,8 @@ let botoesTeimosinha = {
     contadorVerificados: 0
 };
 
-// Lista fixa dos 24 concursos da teimosinha (23/02/2026 a partir do concurso 3619)
-const teimosinhaConcursos = [
-    { numero: 1, data: '23/02/2026', dia: 'Segunda-feira', concurso: 3619 },
-    { numero: 2, data: '24/02/2026', dia: 'Terça-feira', concurso: 3620 },
-    { numero: 3, data: '25/02/2026', dia: 'Quarta-feira', concurso: 3621 },
-    { numero: 4, data: '26/02/2026', dia: 'Quinta-feira', concurso: 3622 },
-    { numero: 5, data: '27/02/2026', dia: 'Sexta-feira', concurso: 3623 },
-    { numero: 6, data: '28/02/2026', dia: 'Sábado', concurso: 3624 },
-    { numero: 7, data: '02/03/2026', dia: 'Segunda-feira', concurso: 3625 },
-    { numero: 8, data: '03/03/2026', dia: 'Terça-feira', concurso: 3626 },
-    { numero: 9, data: '04/03/2026', dia: 'Quarta-feira', concurso: 3627 },
-    { numero: 10, data: '05/03/2026', dia: 'Quinta-feira', concurso: 3628 },
-    { numero: 11, data: '06/03/2026', dia: 'Sexta-feira', concurso: 3629 },
-    { numero: 12, data: '07/03/2026', dia: 'Sábado', concurso: 3630 },
-    { numero: 13, data: '09/03/2026', dia: 'Segunda-feira', concurso: 3631 },
-    { numero: 14, data: '10/03/2026', dia: 'Terça-feira', concurso: 3632 },
-    { numero: 15, data: '11/03/2026', dia: 'Quarta-feira', concurso: 3633 },
-    { numero: 16, data: '12/03/2026', dia: 'Quinta-feira', concurso: 3634 },
-    { numero: 17, data: '13/03/2026', dia: 'Sexta-feira', concurso: 3635 },
-    { numero: 18, data: '14/03/2026', dia: 'Sábado', concurso: 3636 },
-    { numero: 19, data: '16/03/2026', dia: 'Segunda-feira', concurso: 3637 },
-    { numero: 20, data: '17/03/2026', dia: 'Terça-feira', concurso: 3638 },
-    { numero: 21, data: '18/03/2026', dia: 'Quarta-feira', concurso: 3639 },
-    { numero: 22, data: '19/03/2026', dia: 'Quinta-feira', concurso: 3640 },
-    { numero: 23, data: '20/03/2026', dia: 'Sexta-feira', concurso: 3641 },
-    { numero: 24, data: '21/03/2026', dia: 'Sábado', concurso: 3642 }
-];
+// Lista exibida nos botoes/calendario; comeca estimada e depois e atualizada pela API oficial.
+const teimosinhaConcursos = [...concursosTeimosinha];
 
 function gerarConcursosPorConcursoFinal(concursoFinal, dataFinalBR) {
     const dataFinal = parseDataBR(dataFinalBR);
@@ -888,7 +879,8 @@ async function atualizarCalendarioComUltimoConcurso() {
 
         const dados = await response.json();
         if (dados.numero && dados.dataApuracao) {
-            atualizarConcursosTeimosinha(dados.numero, dados.dataApuracao);
+            const ultimoExibicao = resolverUltimoConcursoExibicao(dados);
+            atualizarConcursosTeimosinha(ultimoExibicao.concurso, ultimoExibicao.data);
             const concursosComDatasOficiais = await Promise.all(
                 teimosinhaConcursos.map(async (teimosinha) => {
                     try {
@@ -1907,166 +1899,6 @@ const JogoPaciencia = {
 document.addEventListener('DOMContentLoaded', () => {
     JogoPaciencia.init();
 });
-
-// ============================================
-// 🎊 GERENCIADOR DE CELEBRAÇÃO (CONFETES + MODAL)
-// ============================================
-
-const CelebracaoManager = {
-
-    _particulas: [],
-    _animFrameId: null,
-    _canvas: null,
-    _ctx: null,
-
-    // Cores dos confetes
-    _cores: ['#f39c12','#2ecc71','#3498db','#e74c3c','#9b59b6','#1abc9c','#f1c40f','#ffffff'],
-
-    _criarParticula(w, h) {
-        return {
-            x: Math.random() * w,
-            y: Math.random() * h - h,
-            r: Math.random() * 6 + 4,
-            d: Math.random() * 2 + 1,
-            cor: this._cores[Math.floor(Math.random() * this._cores.length)],
-            tilt: Math.random() * 10 - 5,
-            oscilacao: Math.random() * 0.1,
-            angulo: Math.random() * Math.PI * 2,
-            rotacao: (Math.random() - 0.5) * 0.2,
-        };
-    },
-
-    _desenharFrame() {
-        const { _canvas: cv, _ctx: ctx, _particulas: parts } = this;
-        if (!cv || !ctx) return;
-        ctx.clearRect(0, 0, cv.width, cv.height);
-        parts.forEach(p => {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            ctx.rotate(p.angulo);
-            ctx.fillStyle = p.cor;
-            ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 2.5);
-            ctx.restore();
-            p.y += p.d + 1;
-            p.x += Math.sin(p.angulo) * 1.5;
-            p.angulo += p.rotacao;
-            p.tilt += p.oscilacao;
-            // reinicia quando sai da tela
-            if (p.y > cv.height + 10) {
-                p.y = -10;
-                p.x = Math.random() * cv.width;
-            }
-        });
-        this._animFrameId = requestAnimationFrame(() => this._desenharFrame());
-    },
-
-    _pararConfetes() {
-        if (this._animFrameId) {
-            cancelAnimationFrame(this._animFrameId);
-            this._animFrameId = null;
-        }
-    },
-
-    _iniciarConfetes(qtd = 140) {
-        const cv = document.getElementById('celebracaoCanvas');
-        if (!cv) return;
-        const conteudo = document.getElementById('celebracaoConteudo');
-        cv.width  = conteudo.offsetWidth;
-        cv.height = conteudo.offsetHeight;
-        this._canvas = cv;
-        this._ctx    = cv.getContext('2d');
-        this._particulas = Array.from({ length: qtd }, () =>
-            this._criarParticula(cv.width, cv.height)
-        );
-        this._desenharFrame();
-    },
-
-    // Abre o modal com o texto e estilo corretos
-    abrir(nivel, valorConcurso, totalAcumulado) {
-        const modal  = document.getElementById('celebracaoModal');
-        const conteudo = document.getElementById('celebracaoConteudo');
-        const textoEl  = document.getElementById('celebracaoTexto');
-        const btnFechar = document.getElementById('btnFecharCelebracao');
-        if (!modal || !textoEl) return;
-
-        const moeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
-
-        let bg, tituloHTML, mensagem, qtdConfetes;
-
-        if (nivel === 15) {
-            bg          = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)';
-            tituloHTML  = '🏆🎊🎉 ESTAMOS MILIONÁRIOS! 🎉🎊🏆';
-            mensagem    = `Acertamos 15 pontos!\n\n💎 Prêmio deste concurso:\n${moeda(valorConcurso)}\n\n💰 Total acumulado:\n${moeda(totalAcumulado)}`;
-            qtdConfetes = 200;
-        } else if (nivel === 14) {
-            bg          = 'linear-gradient(135deg, #0d2137 0%, #1a3a5c 60%, #0d2137 100%)';
-            tituloHTML  = '🎊🎉 Parabéns! 14 Pontos! 🎉🎊';
-            mensagem    = `Acertamos 14 pontos!\n\n💵 Prêmio deste concurso:\n${moeda(valorConcurso)}\n\n💰 Total acumulado:\n${moeda(totalAcumulado)}`;
-            qtdConfetes = 150;
-        } else {
-            // 13 pts
-            bg          = 'linear-gradient(135deg, #0d2713 0%, #1a4d2e 60%, #0d2713 100%)';
-            tituloHTML  = '🎯 Nós ganhamos 13 pontos!';
-            mensagem    = `${mensagem = `13 pontos!\n\n💵 Prêmio deste concurso:\n${moeda(valorConcurso)}\n\n💰 Total acumulado:\n${moeda(totalAcumulado)}`}`;
-            qtdConfetes = 100;
-        }
-
-        conteudo.style.background = bg;
-        textoEl.innerHTML =
-            `<span class="cel-titulo">${tituloHTML}</span>${mensagem}`;
-
-        modal.style.display = 'flex';
-        this._pararConfetes();
-        setTimeout(() => this._iniciarConfetes(qtdConfetes), 50);
-
-        const fechar = () => {
-            modal.style.display = 'none';
-            this._pararConfetes();
-        };
-        btnFechar.onclick = fechar;
-        modal.onclick = e => { if (e.target === modal) fechar(); };
-    },
-
-    // Verifica todos os resultados e abre a celebração APENAS para concursos
-    // com 13+ pontos que ainda não foram celebrados (evita reaparecer na auto-atualização).
-    verificarECelebrar(resultados) {
-        if (!resultados || resultados.length === 0) return;
-
-        const ultimoCelebrado = parseInt(localStorage.getItem('ultimoConcursoCelebrado') || '0');
-        const totalAcumulado  = NotificacaoManager.obterTotalAcumulado();
-
-        // Para cada resultado, do mais antigo ao mais recente, verifica se há
-        // algum jogo com 13+ pontos em um concurso que ainda não foi celebrado.
-        let melhorPts    = 0;
-        let valorMelhor  = 0;
-        let concursoCom13 = 0; // número do concurso onde ocorreu a melhor pontuação
-
-        resultados.forEach(resultado => {
-            if (!resultado.dados || !resultado.dados.listaRateioPremio) return;
-            // Ignora concursos que já geraram celebração
-            if (resultado.concurso <= ultimoCelebrado) return;
-
-            jogos.forEach(jogo => {
-                const acertos = jogo.filter(n => resultado.numerosSorteados.includes(n)).length;
-                if (acertos >= 14 && acertos > melhorPts) {
-                    const faixa    = 16 - acertos;
-                    const premioObj = resultado.dados.listaRateioPremio.find(p => p.faixa === faixa);
-                    melhorPts     = acertos;
-                    valorMelhor   = premioObj ? premioObj.valorPremio : 0;
-                    concursoCom13 = resultado.concurso;
-                }
-            });
-        });
-
-        if (melhorPts >= 14 && concursoCom13 > ultimoCelebrado) {
-            // Marca este concurso como celebrado ANTES de abrir o modal,
-            // prevenindo re-exibição caso a auto-verificação rode enquanto o modal está aberto.
-            localStorage.setItem('ultimoConcursoCelebrado', String(concursoCom13));
-            // Pequeno delay para o DOM dos resultados já estar renderizado
-            setTimeout(() => this.abrir(melhorPts, valorMelhor, totalAcumulado), 800);
-        }
-    }
-};
 
 // ============================================
 // 🔔 GERENCIADOR DE NOTIFICAÇÕES — Web Push VAPID (sem OneSignal)
