@@ -1,32 +1,4 @@
 // ============================================
-// 🦁💵 SPLASH SCREEN 3D - PRIMEIRA ABERTURA
-// ============================================
-(function() {
-    const splashScreen = document.getElementById('splashScreen');
-    
-    if (splashScreen) {
-        // Verifica se já foi mostrada hoje
-        const hoje = new Date().toDateString();
-        const ultimaSplash = localStorage.getItem('splashMostrada');
-        
-        if (ultimaSplash === hoje) {
-            // Já mostrou hoje, esconde imediatamente
-            splashScreen.classList.add('hidden');
-        } else {
-            // Primeira vez hoje - mostra a splash
-            document.body.style.overflow = 'hidden'; // Bloqueia scroll durante splash
-            
-            // Após 10 segundos, remove a splash e libera o app
-            setTimeout(() => {
-                splashScreen.classList.add('hidden');
-                document.body.style.overflow = ''; // Libera scroll
-                localStorage.setItem('splashMostrada', hoje);
-            }, 10000);
-        }
-    }
-})();
-
-// ============================================
 // MENU HAMBÚRGUER
 // ============================================
 
