@@ -2,28 +2,6 @@
 // MENU HAMBÚRGUER
 // ============================================
 
-function removerModaisAntigasQuinaSaoJoao() {
-    const termos = ['quina', 'sao joao', 'são joão', 'joao', 'joão'];
-
-    document.querySelectorAll('[id*="modal" i], [class*="modal" i], dialog').forEach(elemento => {
-        const texto = (elemento.textContent || '').toLowerCase();
-        const deveRemover = texto.includes('quina') || termos.some(termo => texto.includes(termo));
-
-        if (deveRemover) {
-            elemento.remove();
-        }
-    });
-
-    document.body.style.overflow = '';
-    document.body.style.touchAction = '';
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', removerModaisAntigasQuinaSaoJoao, { once: true });
-} else {
-    removerModaisAntigasQuinaSaoJoao();
-}
-
 // Elementos
 const hamburger = document.getElementById('hamburger');
 const sideMenu = document.getElementById('sideMenu');
@@ -114,14 +92,31 @@ const DIAS_SEMANA = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
 
 function parseDataBR(dataBR) {
     if (!dataBR || typeof dataBR !== 'string') return null;
-    const partes = dataBR.split('/');
-    if (partes.length !== 3) return null;
 
-    const dia = Number(partes[0]);
-    const mes = Number(partes[1]);
-    const ano = Number(partes[2]);
+    // Aceita "DD/MM/AAAA" e "AAAA-MM-DD"; ignora hora ("DD/MM/AAAA 20:00" ou "AAAA-MM-DDTHH:mm")
+    const texto = dataBR.trim().split(/[ T]/)[0];
+    let dia, mes, ano;
+
+    if (texto.includes('/')) {
+        const partes = texto.split('/');
+        if (partes.length !== 3) return null;
+        dia = Number(partes[0]);
+        mes = Number(partes[1]);
+        ano = Number(partes[2]);
+    } else if (texto.includes('-')) {
+        const partes = texto.split('-');
+        if (partes.length !== 3) return null;
+        ano = Number(partes[0]);
+        mes = Number(partes[1]);
+        dia = Number(partes[2]);
+    } else {
+        return null;
+    }
+
     if (!dia || !mes || !ano) return null;
 
+    // Construtor numérico usa horário LOCAL — evita o deslocamento de -1 dia
+    // que ocorreria com new Date("AAAA-MM-DD") (interpretado como UTC).
     const data = new Date(ano, mes - 1, dia);
     data.setHours(0, 0, 0, 0);
     return data;
@@ -399,9 +394,12 @@ btnBuscarResultado.addEventListener('click', async () => {
 function mostrarResultadoPrincipal(resultado) {
     const dados = resultado.dados;
     
-    // Preencher informações
-    document.getElementById('numeroConcurso').textContent = `${dados.numero} - ${resultado.dia}`;
-    document.getElementById('dataConcurso').textContent = dados.dataApuracao;
+    // Preencher informações — o dia da semana é derivado da PRÓPRIA data do sorteio
+    // exibida, garantindo que rótulo e data nunca divirjam (ex.: "Quarta" para 08/07/2026).
+    const dataSorteio = dados.dataApuracao || resultado.data;
+    const diaSemana = obterDiaSemana(dataSorteio) || resultado.dia;
+    document.getElementById('numeroConcurso').textContent = `${dados.numero} - ${diaSemana}`;
+    document.getElementById('dataConcurso').textContent = dataSorteio;
     
     // Formatar prêmio
     const premio = new Intl.NumberFormat('pt-BR', { 

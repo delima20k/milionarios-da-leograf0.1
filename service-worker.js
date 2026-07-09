@@ -1,9 +1,9 @@
 // Service Worker — Milionários da Leograf
 // Web Push VAPID nativo (sem OneSignal)
 
-const CACHE_NAME = 'milionarios-v10.0';
-const STATIC_CACHE = 'milionarios-static-v10.0';
-const DYNAMIC_CACHE = 'milionarios-dynamic-v10.0';
+const CACHE_NAME = 'milionarios-v11.0';
+const STATIC_CACHE = 'milionarios-static-v11.0';
+const DYNAMIC_CACHE = 'milionarios-dynamic-v11.0';
 
 // URL do app hardcodada — mais confiável que self.location em todos os contextos PWA
 const APP_BASE_URL = 'https://delima20k.github.io/milionarios-da-leograf0.1/';

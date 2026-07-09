@@ -48,7 +48,7 @@
     <meta name="twitter:image" content="logo-header.png">
     
     <title>Milionários da Leograf - Bolão da Lotofácil</title>
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
     <header class="header">
@@ -367,7 +367,7 @@
         </div>
     </footer>
 
-    <script src="script.js?v=10"></script>
+    <script src="script.js?v=11"></script>
     <script>
         // Registrar Service Worker
         if ('serviceWorker' in navigator) {
@@ -379,7 +379,7 @@
                     window.location.reload();
                 });
 
-                navigator.serviceWorker.register('./service-worker.js?v=10')
+                navigator.serviceWorker.register('./service-worker.js?v=11')
                     .then(reg => {
                         console.log('[SW] Service Worker registrado!', reg.scope);
                         reg.update();
